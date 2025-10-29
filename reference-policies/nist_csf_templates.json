@@ -1,0 +1,124 @@
+{
+  "framework": "NIST Cybersecurity Framework (CSF) 2.0",
+  "templates": [
+    {
+      "control_id": "ID.RA-1",
+      "function": "Identify",
+      "category": "Risk Assessment",
+      "title": "Asset Vulnerabilities are Identified",
+      "policy_text": "The organization shall maintain a comprehensive inventory of vulnerabilities affecting information assets. All systems must undergo regular vulnerability assessments using automated scanning tools and manual security reviews. Identified vulnerabilities must be documented, prioritized based on severity and exploitability, and tracked through remediation. Vulnerability data shall be correlated with asset criticality to determine risk exposure. The vulnerability management process must include continuous monitoring, periodic reassessment, and validation of remediation efforts.",
+      "implementation_requirements": [
+        "Deploy automated vulnerability scanning tools (SAST, SCA, DAST)",
+        "Conduct quarterly manual security assessments",
+        "Maintain vulnerability tracking database",
+        "Implement risk-based prioritization framework",
+        "Document remediation plans and timelines"
+      ]
+    },
+    {
+      "control_id": "PR.DS-5",
+      "function": "Protect",
+      "category": "Data Security",
+      "title": "Protections Against Data Leaks are Implemented",
+      "policy_text": "The organization shall implement technical and administrative controls to prevent unauthorized disclosure of sensitive data. All data inputs must be validated and sanitized before processing. Database interactions must use parameterized queries or prepared statements to prevent injection attacks. Sensitive data must be encrypted both at rest and in transit using industry-standard cryptographic protocols. Access controls must enforce principle of least privilege. Data leakage prevention systems must monitor and block unauthorized data exfiltration attempts. Regular security testing must verify the effectiveness of data protection controls.",
+      "implementation_requirements": [
+        "Implement input validation and output encoding",
+        "Use parameterized SQL queries and ORM frameworks",
+        "Deploy Web Application Firewall (WAF)",
+        "Enable TLS 1.3 for data in transit",
+        "Implement role-based access control (RBAC)",
+        "Deploy Data Loss Prevention (DLP) solutions"
+      ]
+    },
+    {
+      "control_id": "PR.AC-1",
+      "function": "Protect",
+      "category": "Identity Management",
+      "title": "Identities and Credentials are Managed",
+      "policy_text": "The organization shall implement robust authentication mechanisms to verify user identities. All systems must enforce strong password policies including minimum length, complexity requirements, and regular rotation. Multi-factor authentication must be required for privileged accounts and sensitive operations. Account provisioning and de-provisioning must follow formal procedures. Failed authentication attempts must be logged and monitored for suspicious activity. Session management must include timeout controls and secure token handling. Credentials must never be hardcoded or stored in plaintext.",
+      "implementation_requirements": [
+        "Enforce password complexity (12+ characters, mixed case, numbers, symbols)",
+        "Implement multi-factor authentication (MFA)",
+        "Use secure password hashing (bcrypt, Argon2)",
+        "Implement account lockout after failed attempts",
+        "Deploy Single Sign-On (SSO) where applicable",
+        "Regular credential rotation and monitoring"
+      ]
+    },
+    {
+      "control_id": "PR.DS-2",
+      "function": "Protect",
+      "category": "Data Security",
+      "title": "Data in Transit is Protected",
+      "policy_text": "The organization shall protect the confidentiality and integrity of data transmitted across networks. All communication channels must use strong encryption protocols (TLS 1.3 or higher). Certificate validation must be properly configured to prevent man-in-the-middle attacks. Legacy protocols (SSLv3, TLS 1.0, TLS 1.1) must be disabled. API endpoints must enforce authentication and encryption. Secure coding practices must prevent exposure of sensitive data in URLs or logs. Network traffic must be monitored for anomalous patterns.",
+      "implementation_requirements": [
+        "Deploy TLS 1.3 with strong cipher suites",
+        "Implement HTTP Strict Transport Security (HSTS)",
+        "Use certificate pinning for mobile applications",
+        "Disable insecure protocols and weak ciphers",
+        "Implement API authentication tokens (OAuth 2.0, JWT)",
+        "Deploy network intrusion detection systems"
+      ]
+    },
+    {
+      "control_id": "PR.IP-12",
+      "function": "Protect",
+      "category": "Information Protection",
+      "title": "Secure Development Practices are Established",
+      "policy_text": "The organization shall integrate security into the software development lifecycle. All code must undergo security review before deployment. Static and dynamic application security testing must be integrated into CI/CD pipelines. Developers must receive secure coding training annually. Third-party dependencies must be regularly scanned for known vulnerabilities. Security requirements must be defined during design phase. Code repositories must enforce access controls and audit logging. Security bugs must be prioritized and remediated according to risk level.",
+      "implementation_requirements": [
+        "Integrate SAST/DAST tools in CI/CD pipeline",
+        "Conduct peer code reviews with security focus",
+        "Implement dependency scanning and update management",
+        "Provide OWASP Top 10 training for developers",
+        "Use secure coding guidelines and templates",
+        "Maintain security requirements in project documentation"
+      ]
+    },
+    {
+      "control_id": "DE.CM-4",
+      "function": "Detect",
+      "category": "Continuous Monitoring",
+      "title": "Malicious Code is Detected",
+      "policy_text": "The organization shall implement controls to detect and prevent execution of malicious code. All systems must run up-to-date anti-malware software. Application code must be scanned for malicious patterns during build process. Runtime application self-protection (RASP) may be deployed for critical applications. File uploads must be validated and scanned before processing. Code signing must be used to verify software authenticity. Security monitoring must alert on suspicious code execution attempts. Incident response procedures must address malware detection events.",
+      "implementation_requirements": [
+        "Deploy endpoint protection on all systems",
+        "Implement application whitelisting",
+        "Scan all file uploads with anti-malware",
+        "Use static analysis to detect malicious patterns",
+        "Implement secure deserialization practices",
+        "Monitor for unauthorized code modifications"
+      ]
+    },
+    {
+      "control_id": "RS.AN-3",
+      "function": "Respond",
+      "category": "Analysis",
+      "title": "Forensics are Performed",
+      "policy_text": "The organization shall maintain forensic capabilities to investigate security incidents. Security logs must be centrally collected and retained for minimum 90 days. Log data must include authentication events, access attempts, system changes, and security alerts. Forensic analysis tools must be available to security team. Chain of custody procedures must protect evidence integrity. Incident timelines must be reconstructed from log data. Root cause analysis must identify vulnerability exploitation methods. Lessons learned must drive security improvements.",
+      "implementation_requirements": [
+        "Deploy centralized log management (SIEM)",
+        "Enable comprehensive application logging",
+        "Implement log integrity protection",
+        "Maintain forensic investigation toolkit",
+        "Document incident handling procedures",
+        "Conduct post-incident reviews"
+      ]
+    },
+    {
+      "control_id": "RC.CO-2",
+      "function": "Recover",
+      "category": "Communications",
+      "title": "Reputation is Managed",
+      "policy_text": "The organization shall manage its security reputation through transparent vulnerability disclosure. Security incidents must be reported to affected parties according to legal and regulatory requirements. Public communications must balance transparency with operational security. Vulnerability disclosure policy must define responsible disclosure process. Security improvements must be communicated to stakeholders. Third-party security researchers must have clear channels for reporting vulnerabilities. The organization must participate in information sharing communities.",
+      "implementation_requirements": [
+        "Establish vulnerability disclosure policy",
+        "Implement bug bounty or responsible disclosure program",
+        "Define incident notification procedures",
+        "Prepare incident communication templates",
+        "Designate security contact information",
+        "Participate in threat intelligence sharing"
+      ]
+    }
+  ]
+}

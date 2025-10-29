@@ -1,0 +1,317 @@
+#!/usr/bin/env python3
+"""
+Universal Vulnerability Report Parser
+Converts SAST, SCA, and DAST reports into unified JSON format
+"""
+
+import json
+import xml.etree.ElementTree as ET
+import xmltodict
+import argparse
+from pathlib import Path
+from typing import Dict, List, Any
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logger = logging.getLogger(__name__)
+
+
+class VulnerabilityParser:
+    """Parse security scan reports from multiple tools"""
+    
+    CWE_MAPPING = {
+        "SQL Injection": "CWE-89",
+        "XSS": "CWE-79",
+        "Path Traversal": "CWE-22",
+        "Command Injection": "CWE-78",
+        "Insecure Deserialization": "CWE-502",
+        "Broken Authentication": "CWE-287",
+        "Sensitive Data Exposure": "CWE-200",
+        "XXE": "CWE-611",
+        "Broken Access Control": "CWE-284",
+        "Security Misconfiguration": "CWE-16"
+    }
+    
+    SEVERITY_MAPPING = {
+        "CRITICAL": 5,
+        "HIGH": 4,
+        "MEDIUM": 3,
+        "LOW": 2,
+        "INFO": 1
+    }
+    
+    def __init__(self, input_dir: Path, output_file: Path):
+        self.input_dir = Path(input_dir)
+        self.output_file = Path(output_file)
+        self.vulnerabilities = []
+        
+    def parse_all(self):
+        """Parse all reports in input directory"""
+        logger.info(f"Parsing reports from {self.input_dir}")
+        
+        for report_file in self.input_dir.glob("*"):
+            try:
+                if "semgrep" in report_file.name:
+                    self._parse_semgrep(report_file)
+                elif "nodejsscan" in report_file.name:
+                    self._parse_nodejsscan(report_file)
+                elif "bandit" in report_file.name:
+                    self._parse_bandit(report_file)
+                elif "npm_audit" in report_file.name:
+                    self._parse_npm_audit(report_file)
+                elif "snyk" in report_file.name:
+                    self._parse_snyk(report_file)
+                elif "zap" in report_file.name:
+                    if report_file.suffix == ".json":
+                        self._parse_zap_json(report_file)
+                    elif report_file.suffix == ".xml":
+                        self._parse_zap_xml(report_file)
+                        
+            except Exception as e:
+                logger.error(f"Error parsing {report_file.name}: {e}")
+                
+        logger.info(f"Total vulnerabilities found: {len(self.vulnerabilities)}")
+        
+    def _parse_semgrep(self, file_path: Path):
+        """Parse Semgrep SAST report"""
+        with open(file_path) as f:
+            data = json.load(f)
+            
+        for result in data.get("results", []):
+            vuln = {
+                "tool": "Semgrep",
+                "type": "SAST",
+                "title": result.get("check_id", "Unknown"),
+                "severity": result.get("extra", {}).get("severity", "MEDIUM").upper(),
+                "description": result.get("extra", {}).get("message", ""),
+                "file": result.get("path", ""),
+                "line": result.get("start", {}).get("line", 0),
+                "code_snippet": result.get("extra", {}).get("lines", ""),
+                "cwe": self._extract_cwe(result.get("check_id", "")),
+                "owasp": self._map_to_owasp(result.get("check_id", "")),
+                "recommendation": result.get("extra", {}).get("fix", "Review and remediate")
+            }
+            self.vulnerabilities.append(vuln)
+            
+    def _parse_nodejsscan(self, file_path: Path):
+        """Parse NodeJsScan SAST report"""
+        with open(file_path) as f:
+            data = json.load(f)
+            
+        for category, findings in data.get("sec_issues", {}).items():
+            for finding in findings:
+                vuln = {
+                    "tool": "NodeJsScan",
+                    "type": "SAST",
+                    "title": finding.get("title", category),
+                    "severity": finding.get("severity", "MEDIUM").upper(),
+                    "description": finding.get("description", ""),
+                    "file": finding.get("path", ""),
+                    "line": finding.get("line", 0),
+                    "code_snippet": finding.get("code", ""),
+                    "cwe": self.CWE_MAPPING.get(category, "CWE-Unknown"),
+                    "owasp": self._map_to_owasp(category),
+                    "recommendation": finding.get("solution", "")
+                }
+                self.vulnerabilities.append(vuln)
+                
+    def _parse_bandit(self, file_path: Path):
+        """Parse Bandit SAST report"""
+        with open(file_path) as f:
+            data = json.load(f)
+            
+        for result in data.get("results", []):
+            vuln = {
+                "tool": "Bandit",
+                "type": "SAST",
+                "title": result.get("test_name", "Unknown"),
+                "severity": result.get("issue_severity", "MEDIUM").upper(),
+                "description": result.get("issue_text", ""),
+                "file": result.get("filename", ""),
+                "line": result.get("line_number", 0),
+                "code_snippet": result.get("code", ""),
+                "cwe": result.get("issue_cwe", {}).get("id", ""),
+                "owasp": self._map_to_owasp(result.get("test_name", "")),
+                "recommendation": "Review security best practices"
+            }
+            self.vulnerabilities.append(vuln)
+            
+    def _parse_npm_audit(self, file_path: Path):
+        """Parse npm audit SCA report"""
+        with open(file_path) as f:
+            data = json.load(f)
+            
+        for vuln_id, vuln_data in data.get("vulnerabilities", {}).items():
+            vuln = {
+                "tool": "npm audit",
+                "type": "SCA",
+                "title": vuln_data.get("name", vuln_id),
+                "severity": vuln_data.get("severity", "medium").upper(),
+                "description": vuln_data.get("via", [{}])[0].get("title", "") if isinstance(vuln_data.get("via"), list) else "",
+                "package": vuln_data.get("name", ""),
+                "version": vuln_data.get("range", ""),
+                "fixed_in": vuln_data.get("fixAvailable", {}).get("version", ""),
+                "cwe": "",
+                "owasp": "A06:2021 - Vulnerable Components",
+                "recommendation": f"Update to version {vuln_data.get('fixAvailable', {}).get('version', 'latest')}"
+            }
+            self.vulnerabilities.append(vuln)
+            
+    def _parse_snyk(self, file_path: Path):
+        """Parse Snyk SCA report"""
+        with open(file_path) as f:
+            data = json.load(f)
+            
+        for vuln in data.get("vulnerabilities", []):
+            vulnerability = {
+                "tool": "Snyk",
+                "type": "SCA",
+                "title": vuln.get("title", ""),
+                "severity": vuln.get("severity", "medium").upper(),
+                "description": vuln.get("description", ""),
+                "package": vuln.get("packageName", ""),
+                "version": vuln.get("version", ""),
+                "fixed_in": vuln.get("fixedIn", []),
+                "cve": vuln.get("identifiers", {}).get("CVE", []),
+                "cwe": vuln.get("identifiers", {}).get("CWE", []),
+                "owasp": "A06:2021 - Vulnerable Components",
+                "recommendation": f"Upgrade to {vuln.get('fixedIn', ['latest'])[0]}"
+            }
+            self.vulnerabilities.append(vulnerability)
+            
+    def _parse_zap_json(self, file_path: Path):
+        """Parse OWASP ZAP DAST report (JSON)"""
+        with open(file_path) as f:
+            data = json.load(f)
+            
+        for site in data.get("site", []):
+            for alert in site.get("alerts", []):
+                vuln = {
+                    "tool": "OWASP ZAP",
+                    "type": "DAST",
+                    "title": alert.get("name", ""),
+                    "severity": self._normalize_zap_severity(alert.get("riskcode", "0")),
+                    "description": alert.get("desc", ""),
+                    "url": alert.get("url", ""),
+                    "method": alert.get("method", ""),
+                    "parameter": alert.get("param", ""),
+                    "attack": alert.get("attack", ""),
+                    "evidence": alert.get("evidence", ""),
+                    "cwe": f"CWE-{alert.get('cweid', '')}",
+                    "owasp": self._map_to_owasp(alert.get("name", "")),
+                    "recommendation": alert.get("solution", "")
+                }
+                self.vulnerabilities.append(vuln)
+                
+    def _parse_zap_xml(self, file_path: Path):
+        """Parse OWASP ZAP DAST report (XML)"""
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+        
+        for site in root.findall(".//site"):
+            for alert in site.findall(".//alertitem"):
+                vuln = {
+                    "tool": "OWASP ZAP",
+                    "type": "DAST",
+                    "title": alert.find("name").text if alert.find("name") is not None else "",
+                    "severity": self._normalize_zap_severity(alert.find("riskcode").text if alert.find("riskcode") is not None else "0"),
+                    "description": alert.find("desc").text if alert.find("desc") is not None else "",
+                    "url": alert.find("uri").text if alert.find("uri") is not None else "",
+                    "cwe": f"CWE-{alert.find('cweid').text}" if alert.find("cweid") is not None else "",
+                    "owasp": self._map_to_owasp(alert.find("name").text if alert.find("name") is not None else ""),
+                    "recommendation": alert.find("solution").text if alert.find("solution") is not None else ""
+                }
+                self.vulnerabilities.append(vuln)
+                
+    def _normalize_zap_severity(self, riskcode: str) -> str:
+        """Convert ZAP risk code to severity"""
+        mapping = {"0": "INFO", "1": "LOW", "2": "MEDIUM", "3": "HIGH", "4": "CRITICAL"}
+        return mapping.get(str(riskcode), "MEDIUM")
+        
+    def _extract_cwe(self, check_id: str) -> str:
+        """Extract CWE from check ID"""
+        for vuln_type, cwe in self.CWE_MAPPING.items():
+            if vuln_type.lower() in check_id.lower():
+                return cwe
+        return "CWE-Unknown"
+        
+    def _map_to_owasp(self, vulnerability_name: str) -> str:
+        """Map vulnerability to OWASP Top 10 2021"""
+        owasp_mapping = {
+            "injection": "A03:2021 - Injection",
+            "xss": "A03:2021 - Injection",
+            "authentication": "A07:2021 - Identification and Authentication Failures",
+            "access": "A01:2021 - Broken Access Control",
+            "exposure": "A02:2021 - Cryptographic Failures",
+            "xxe": "A05:2021 - Security Misconfiguration",
+            "deserialization": "A08:2021 - Software and Data Integrity Failures",
+            "logging": "A09:2021 - Security Logging and Monitoring Failures",
+            "ssrf": "A10:2021 - Server-Side Request Forgery"
+        }
+        
+        vuln_lower = vulnerability_name.lower()
+        for key, owasp_cat in owasp_mapping.items():
+            if key in vuln_lower:
+                return owasp_cat
+        return "A04:2021 - Insecure Design"
+        
+    def save_results(self):
+        """Save parsed vulnerabilities to JSON"""
+        self.output_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        output_data = {
+            "metadata": {
+                "total_vulnerabilities": len(self.vulnerabilities),
+                "by_severity": self._count_by_severity(),
+                "by_type": self._count_by_type(),
+                "by_tool": self._count_by_tool()
+            },
+            "vulnerabilities": self.vulnerabilities
+        }
+        
+        with open(self.output_file, 'w') as f:
+            json.dump(output_data, f, indent=2)
+            
+        logger.info(f"Results saved to {self.output_file}")
+        
+    def _count_by_severity(self) -> Dict[str, int]:
+        """Count vulnerabilities by severity"""
+        counts = {}
+        for vuln in self.vulnerabilities:
+            severity = vuln.get("severity", "UNKNOWN")
+            counts[severity] = counts.get(severity, 0) + 1
+        return counts
+        
+    def _count_by_type(self) -> Dict[str, int]:
+        """Count vulnerabilities by type (SAST/SCA/DAST)"""
+        counts = {}
+        for vuln in self.vulnerabilities:
+            vuln_type = vuln.get("type", "UNKNOWN")
+            counts[vuln_type] = counts.get(vuln_type, 0) + 1
+        return counts
+        
+    def _count_by_tool(self) -> Dict[str, int]:
+        """Count vulnerabilities by scanning tool"""
+        counts = {}
+        for vuln in self.vulnerabilities:
+            tool = vuln.get("tool", "UNKNOWN")
+            counts[tool] = counts.get(tool, 0) + 1
+        return counts
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Parse vulnerability reports")
+    parser.add_argument("--input", required=True, help="Input directory with scan reports")
+    parser.add_argument("--output", required=True, help="Output JSON file")
+    
+    args = parser.parse_args()
+    
+    vulnerability_parser = VulnerabilityParser(args.input, args.output)
+    vulnerability_parser.parse_all()
+    vulnerability_parser.save_results()
+    
+    logger.info("✅ Parsing complete!")
+
+
+if __name__ == "__main__":
+    main()

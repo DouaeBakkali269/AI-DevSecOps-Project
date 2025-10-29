@@ -1,0 +1,69 @@
+{
+  "metadata": {
+    "total_vulnerabilities": 14,
+    "by_severity": {
+      "CRITICAL": 1,
+      "HIGH": 7,
+      "MEDIUM": 2,
+      "LOW": 4
+    },
+    "by_type": {
+      "SAST": 5,
+      "SCA": 4,
+      "DAST": 5
+    },
+    "by_tool": {
+      "Semgrep": 5,
+      "npm audit": 4,
+      "OWASP ZAP": 5
+    }
+  },
+  "vulnerabilities": [
+    {
+      "tool": "Semgrep",
+      "type": "SAST",
+      "title": "SQL Injection",
+      "severity": "HIGH",
+      "description": "SQL injection vulnerability detected",
+      "file": "routes/search.js",
+      "line": 45
+    },
+    {
+      "tool": "Semgrep",
+      "type": "SAST",
+      "title": "XSS",
+      "severity": "HIGH",
+      "description": "XSS vulnerability",
+      "file": "routes/profile.js",
+      "line": 23
+    },
+    {
+      "tool": "npm audit",
+      "type": "SCA",
+      "title": "Vulnerable: express",
+      "severity": "HIGH",
+      "package": "express"
+    },
+    {
+      "tool": "npm audit",
+      "type": "SCA",
+      "title": "Vulnerable: jsonwebtoken",
+      "severity": "HIGH",
+      "package": "jsonwebtoken"
+    },
+    {
+      "tool": "OWASP ZAP",
+      "type": "DAST",
+      "title": "SQL Injection",
+      "severity": "HIGH",
+      "description": "SQL injection may be possible"
+    },
+    {
+      "tool": "OWASP ZAP",
+      "type": "DAST",
+      "title": "Cross-Site Scripting",
+      "severity": "HIGH",
+      "description": "XSS is possible"
+    }
+  ]
+}

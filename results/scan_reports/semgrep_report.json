@@ -1,0 +1,26 @@
+{
+  "results": [
+    {
+      "check_id": "javascript.express.security.injection.sql-injection",
+      "path": "routes/search.js",
+      "start": {"line": 45, "col": 10},
+      "extra": {
+        "message": "SQL injection vulnerability detected",
+        "severity": "HIGH",
+        "lines": "const query = 'SELECT * FROM Products WHERE name=' + req.query.q;",
+        "fix": "Use parameterized queries"
+      }
+    },
+    {
+      "check_id": "javascript.express.security.xss.direct-response-write",
+      "path": "routes/profile.js",
+      "start": {"line": 23, "col": 5},
+      "extra": {
+        "message": "XSS vulnerability",
+        "severity": "HIGH",
+        "lines": "res.send('<h1>Welcome ' + req.body.username + '</h1>');",
+        "fix": "Use template engine with auto-escaping"
+      }
+    }
+  ]
+}

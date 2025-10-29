@@ -1,0 +1,165 @@
+{
+  "standard": "ISO/IEC 27001:2022",
+  "templates": [
+    {
+      "control_id": "A.8.8",
+      "domain": "Asset Management",
+      "title": "Management of Technical Vulnerabilities",
+      "policy_text": "The organization shall establish and maintain a technical vulnerability management process to identify, evaluate, and remediate vulnerabilities in information systems. Vulnerability information must be obtained from multiple sources including security advisories, vendor notifications, and automated scanning. All systems must be regularly assessed for vulnerabilities using industry-standard tools. Identified vulnerabilities must be classified according to risk level considering exploitability, business impact, and exposure. Remediation must be prioritized based on risk assessment results. Emergency patches must be applied within defined timeframes for critical vulnerabilities. A remediation tracking system must monitor progress and escalate overdue items. Post-remediation testing must verify successful mitigation without introducing new issues.",
+      "implementation_requirements": [
+        "Subscribe to security advisory feeds (CERT, vendor bulletins)",
+        "Deploy automated vulnerability scanning (SAST, SCA, DAST)",
+        "Conduct monthly vulnerability assessments",
+        "Maintain vulnerability remediation database",
+        "Define SLAs for patch deployment by severity",
+        "Implement exception process for accepted risks"
+      ],
+      "verification_methods": [
+        "Review vulnerability scan results",
+        "Audit patch deployment timelines",
+        "Verify remediation testing procedures",
+        "Check vulnerability database completeness"
+      ]
+    },
+    {
+      "control_id": "A.8.3",
+      "domain": "Asset Management",
+      "title": "Handling of Assets",
+      "policy_text": "The organization shall implement procedures for proper handling of information assets throughout their lifecycle. All code repositories must be classified according to sensitivity level. Access to source code must be restricted based on need-to-know principle. Version control systems must maintain complete audit logs. Code review must be mandatory before production deployment. Secure coding standards must be enforced through automated checks. Third-party code and libraries must undergo security assessment before integration. Deprecated or end-of-life systems must be decommissioned securely. Asset disposal must include secure data sanitization.",
+      "implementation_requirements": [
+        "Classify all code repositories and applications",
+        "Implement repository access controls",
+        "Enable commit signing and audit logging",
+        "Enforce mandatory code review gates",
+        "Automate security policy enforcement",
+        "Document secure decommissioning procedures"
+      ],
+      "verification_methods": [
+        "Audit repository access controls",
+        "Review code review compliance metrics",
+        "Verify security policy enforcement",
+        "Check decommissioning records"
+      ]
+    },
+    {
+      "control_id": "A.5.23",
+      "domain": "Organizational Controls",
+      "title": "Information Security for Use of Cloud Services",
+      "policy_text": "The organization shall establish security requirements for cloud services and verify compliance. All cloud deployments must undergo security assessment. Container images must be scanned for vulnerabilities before deployment. Cloud infrastructure must implement security hardening based on CIS benchmarks. Network segmentation must isolate sensitive workloads. Identity and access management must follow zero-trust principles. Encryption must be enabled for data at rest and in transit. Cloud security configurations must be continuously monitored. Security logs must be integrated with central monitoring. Disaster recovery and backup procedures must be documented and tested.",
+      "implementation_requirements": [
+        "Perform cloud security assessments",
+        "Scan container images with Trivy or Clair",
+        "Implement Infrastructure as Code security scanning",
+        "Enable cloud-native security services",
+        "Deploy Cloud Security Posture Management (CSPM)",
+        "Implement cloud workload protection"
+      ],
+      "verification_methods": [
+        "Review cloud security assessment reports",
+        "Audit container scan results",
+        "Verify IaC security policies",
+        "Check CSPM compliance dashboards"
+      ]
+    },
+    {
+      "control_id": "A.8.23",
+      "domain": "Technological Controls",
+      "title": "Web Filtering",
+      "policy_text": "The organization shall implement controls to protect against web-based threats. All web applications must undergo security testing including automated scanning and manual penetration testing. Input validation must be implemented on all user inputs to prevent injection attacks. Output encoding must prevent cross-site scripting. Content Security Policy headers must restrict resource loading. Security headers (HSTS, X-Frame-Options, X-Content-Type-Options) must be configured. Rate limiting must prevent abuse. Session management must implement secure token generation and timeout controls. Web Application Firewall must provide defense-in-depth.",
+      "implementation_requirements": [
+        "Implement input validation frameworks",
+        "Configure security headers on all responses",
+        "Deploy Web Application Firewall (WAF)",
+        "Implement rate limiting and throttling",
+        "Use secure session management libraries",
+        "Enable CSP and subresource integrity"
+      ],
+      "verification_methods": [
+        "Conduct DAST scanning",
+        "Review security header configurations",
+        "Test WAF rule effectiveness",
+        "Verify rate limiting implementation"
+      ]
+    },
+    {
+      "control_id": "A.8.26",
+      "domain": "Technological Controls",
+      "title": "Application Security Requirements",
+      "policy_text": "The organization shall define and implement security requirements throughout the application development lifecycle. Security requirements must be elicited during design phase. Threat modeling must identify potential attack vectors. Secure architecture review must validate security controls. All code must undergo static analysis to detect security flaws. Dynamic testing must verify runtime security. Penetration testing must validate security before production release. Security regression testing must prevent reintroduction of vulnerabilities. Security metrics must track vulnerability trends. Continuous security monitoring must detect exploitation attempts.",
+      "implementation_requirements": [
+        "Define security requirements in project charter",
+        "Conduct threat modeling for new features",
+        "Integrate SAST tools in IDE and CI/CD",
+        "Perform DAST testing in staging environment",
+        "Schedule annual penetration testing",
+        "Implement security regression test suites"
+      ],
+      "verification_methods": [
+        "Review security requirements documentation",
+        "Audit threat model completeness",
+        "Check SAST/DAST integration",
+        "Review penetration test results"
+      ]
+    },
+    {
+      "control_id": "A.5.7",
+      "domain": "Organizational Controls",
+      "title": "Threat Intelligence",
+      "policy_text": "The organization shall collect and analyze threat intelligence to inform security decisions. Vulnerability databases must be monitored for newly disclosed vulnerabilities affecting used technologies. Exploit availability must be tracked to prioritize remediation. Industry threat reports must inform risk assessments. Security research must be reviewed for relevant attack techniques. Information sharing partnerships must facilitate threat awareness. Threat intelligence must be incorporated into security testing scenarios. Indicators of compromise must be integrated into detection systems.",
+      "implementation_requirements": [
+        "Subscribe to CVE and NVD feeds",
+        "Monitor security researcher disclosures",
+        "Participate in industry threat sharing groups",
+        "Implement threat intelligence platforms",
+        "Correlate threat intel with asset inventory",
+        "Update detection rules based on new threats"
+      ],
+      "verification_methods": [
+        "Review threat intelligence sources",
+        "Audit threat correlation processes",
+        "Verify detection rule updates",
+        "Check information sharing participation"
+      ]
+    },
+    {
+      "control_id": "A.8.12",
+      "domain": "Technological Controls",
+      "title": "Data Leakage Prevention",
+      "policy_text": "The organization shall implement controls to prevent unauthorized disclosure of sensitive information. All data flows must be mapped and classified. Sensitive data must be identified and tagged. Data exfiltration must be monitored and blocked. Application logging must not include sensitive data. Error messages must not disclose system information. Debug modes must be disabled in production. Source code must not contain hardcoded secrets. Environment variables must be secured. Secure configuration management must prevent exposure of credentials.",
+      "implementation_requirements": [
+        "Implement data classification scheme",
+        "Deploy DLP solutions for sensitive data",
+        "Sanitize logs to remove secrets",
+        "Use generic error messages in production",
+        "Implement secrets management (Vault, Key Management Service)",
+        "Scan code for hardcoded credentials"
+      ],
+      "verification_methods": [
+        "Review data classification inventory",
+        "Audit DLP policy effectiveness",
+        "Test error message handling",
+        "Scan for exposed secrets"
+      ]
+    },
+    {
+      "control_id": "A.5.14",
+      "domain": "Organizational Controls",
+      "title": "Information Transfer",
+      "policy_text": "The organization shall protect information during transfer between systems and organizations. All network communications must use encryption. API security must include authentication, authorization, and rate limiting. File transfers must use secure protocols. Email security must protect against phishing and spoofing. Supply chain security must verify integrity of software components. Third-party integrations must undergo security review. Data sharing agreements must define security requirements. Secure communication channels must be established with partners.",
+      "implementation_requirements": [
+        "Enforce TLS for all network communications",
+        "Implement API gateway with security controls",
+        "Use SFTP or SCP for file transfers",
+        "Deploy email security gateway",
+        "Verify software component integrity (checksums, signatures)",
+        "Define third-party security requirements"
+      ],
+      "verification_methods": [
+        "Audit encryption configurations",
+        "Review API security controls",
+        "Test secure file transfer mechanisms",
+        "Verify component integrity checks"
+      ]
+    }
+  ]
+}

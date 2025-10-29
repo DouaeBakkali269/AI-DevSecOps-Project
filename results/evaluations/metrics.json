@@ -1,0 +1,16 @@
+{
+  "models": {
+    "gpt-4": {
+      "bleu": {"mean": 0.4237, "std": 0.0823},
+      "rouge_l": {"mean": 0.5142, "std": 0.0712},
+      "policy_count": 3,
+      "evaluation_details": {
+        "compliance_coverage": {
+          "nist": 100.0,
+          "iso27001": 100.0,
+          "owasp": 100.0
+        }
+      }
+    }
+  }
+}

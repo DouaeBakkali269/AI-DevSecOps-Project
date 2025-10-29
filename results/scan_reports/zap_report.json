@@ -1,0 +1,23 @@
+{
+  "site": [{
+    "name": "http://localhost:3000",
+    "alerts": [
+      {
+        "name": "SQL Injection",
+        "riskcode": "3",
+        "desc": "SQL injection may be possible",
+        "url": "http://localhost:3000/rest/products/search",
+        "cweid": "89",
+        "solution": "Use prepared statements"
+      },
+      {
+        "name": "Cross-Site Scripting",
+        "riskcode": "3",
+        "desc": "XSS is possible",
+        "url": "http://localhost:3000/search",
+        "cweid": "79",
+        "solution": "Encode all user input"
+      }
+    ]
+  }]
+}

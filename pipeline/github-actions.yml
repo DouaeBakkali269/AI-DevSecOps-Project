@@ -1,0 +1,177 @@
+name: DevSecOps Security Policy Generator
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM
+
+jobs:
+  security-scan-and-policy-generation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Install Dependencies
+      run: |
+        pip install -r requirements.txt
+        cd app/juice-shop && npm install
+    
+    # ==================== SAST Scanning ====================
+    
+    - name: Run Semgrep (SAST)
+      run: |
+        pip install semgrep
+        semgrep --config=auto app/juice-shop \
+          --json --output results/scan_reports/semgrep_report.json || true
+    
+    - name: Run NodeJsScan (SAST)
+      run: |
+        pip install nodejsscan
+        nodejsscan -d app/juice-shop -o results/scan_reports/nodejsscan_report.json || true
+    
+    - name: Run Bandit (SAST - if Python code exists)
+      run: |
+        bandit -r app/juice-shop -f json -o results/scan_reports/bandit_report.json || true
+      continue-on-error: true
+    
+    # ==================== SCA Scanning ====================
+    
+    - name: Run npm audit (SCA)
+      run: |
+        cd app/juice-shop
+        npm audit --json > ../../results/scan_reports/npm_audit_report.json || true
+    
+    - name: Run Snyk (SCA)
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      run: |
+        npm install -g snyk
+        snyk auth $SNYK_TOKEN
+        cd app/juice-shop
+        snyk test --json > ../../results/scan_reports/snyk_report.json || true
+      continue-on-error: true
+    
+    # ==================== DAST Scanning ====================
+    
+    - name: Start Juice Shop Application
+      run: |
+        cd app/juice-shop
+        npm start &
+        sleep 30  # Wait for app to start
+    
+    - name: Run OWASP ZAP (DAST)
+      uses: zaproxy/action-baseline@v0.10.0
+      with:
+        target: 'http://localhost:3000'
+        rules_file_name: '.zap/rules.tsv'
+        cmd_options: '-a -j -r zap_report.html'
+    
+    - name: Save ZAP Report
+      run: |
+        mv zap_report.html results/scan_reports/
+        mv zap_report.json results/scan_reports/ || true
+    
+    # ==================== Parse Reports ====================
+    
+    - name: Parse Vulnerability Reports
+      run: |
+        python parsers/parse_reports.py \
+          --input results/scan_reports \
+          --output results/parsed_data/vulnerabilities.json
+    
+    # ==================== Generate Policies with LLMs ====================
+    
+    - name: Generate Security Policies (GPT-4)
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        python llm-policy-generator/policy_generator.py \
+          --model gpt-4 \
+          --input results/parsed_data/vulnerabilities.json \
+          --output results/generated_policies/gpt4_policies.json
+    
+    - name: Generate Security Policies (Claude)
+      env:
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      run: |
+        python llm-policy-generator/policy_generator.py \
+          --model claude-sonnet-4.5 \
+          --input results/parsed_data/vulnerabilities.json \
+          --output results/generated_policies/claude_policies.json
+    
+    - name: Generate Security Policies (DeepSeek)
+      env:
+        TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+      run: |
+        python llm-policy-generator/policy_generator.py \
+          --model deepseek-r1 \
+          --input results/parsed_data/vulnerabilities.json \
+          --output results/generated_policies/deepseek_policies.json
+    
+    # ==================== Evaluate Policies ====================
+    
+    - name: Evaluate Generated Policies
+      run: |
+        python evaluation/evaluate_policies.py \
+          --generated results/generated_policies \
+          --reference reference-policies \
+          --output results/evaluations/metrics.json
+    
+    # ==================== Generate Report ====================
+    
+    - name: Generate Comparison Report
+      run: |
+        python evaluation/generate_report.py \
+          --metrics results/evaluations/metrics.json \
+          --output results/final_report.html
+    
+    # ==================== Upload Artifacts ====================
+    
+    - name: Upload Scan Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-scan-reports
+        path: results/scan_reports/
+    
+    - name: Upload Generated Policies
+      uses: actions/upload-artifact@v4
+      with:
+        name: generated-policies
+        path: results/generated_policies/
+    
+    - name: Upload Evaluation Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: evaluation-results
+        path: results/evaluations/
+    
+    - name: Upload Final Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: final-report
+        path: results/final_report.html
+    
+    # ==================== Security Gates ====================
+    
+    - name: Check Critical Vulnerabilities
+      run: |
+        python pipeline/check_security_gates.py \
+          --report results/parsed_data/vulnerabilities.json \
+          --threshold critical

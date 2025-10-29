@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  juice-shop:
+    image: bkimminich/juice-shop
+    container_name: juice-shop-app
+    ports:
+      - "3000:3000"
+    networks:
+      - devsecops-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  zap:
+    image: softwaresecurityproject/zap-stable
+    container_name: owasp-zap
+    command: zap-baseline.py -t http://juice-shop-app:3000 -J /zap/wrk/zap_report.json -r /zap/wrk/zap_report.html
+    volumes:
+      - ./results/scan_reports:/zap/wrk:rw
+    networks:
+      - devsecops-net
+    depends_on:
+      juice-shop:
+        condition: service_healthy
+
+  policy-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: policy-generator
+    volumes:
+      - ./:/app
+      - ./results:/app/results
+    env_file:
+      - .env
+    networks:
+      - devsecops-net
+    depends_on:
+      - juice-shop
+    command: /bin/bash -c "python3 parsers/parse_reports.py --input results/scan_reports --output results/parsed_data/vulnerabilities.json && python3 llm-policy-generator/policy_generator.py --model gpt-4 --input results/parsed_data/vulnerabilities.json --output results/generated_policies/gpt4_policies.json"
+
+networks:
+  devsecops-net:
+    driver: bridge
+
+volumes:
+  scan-results:
+    driver: local
