@@ -1,283 +1,351 @@
 #!/usr/bin/env python3
 """
-LLM-Based Security Policy Generator
-Generates security policies from vulnerability data using multiple LLMs
+ISO 27001 Security Policy Generator
+Generates security policies based on vulnerability scans and ISO 27001 Annex A controls.
 """
 
 import json
-import argparse
-from pathlib import Path
-from typing import Dict, List, Any
-import logging
 import os
+import argparse
 from datetime import datetime
-
-import openai
-from anthropic import Anthropic
-import requests
-
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-logger = logging.getLogger(__name__)
+from pathlib import Path
+from openai import OpenAI
+from dotenv import load_dotenv
 
 
-class PolicyGenerator:
-    """Generate security policies using LLMs"""
+def load_vulnerabilities(path="../results/parsed_data/vulnerabilities.json"):
+    """Load vulnerabilities from JSON file."""
+    # Get the directory where this script is located
+    script_dir = Path(__file__).parent
+    # Resolve path relative to script location
+    full_path = (script_dir / path).resolve()
+    with open(full_path, 'r') as f:
+        return json.load(f)
+
+
+def load_iso27001_annex(path="../reference-policies/iso27001_templates.json"):
+    """Load ISO 27001 Annex A controls."""
+    # Get the directory where this script is located
+    script_dir = Path(__file__).parent
+    # Resolve path relative to script location
+    full_path = (script_dir / path).resolve()
+    with open(full_path, 'r') as f:
+        return f.read()
+
+
+def load_iso27001_annex_controls(path="../docs/ISO27001-AnnexA.txt"):
+    """Load ISO 27001 Annex A controls list from text file."""
+    # Get the directory where this script is located
+    script_dir = Path(__file__).parent
+    # Resolve path relative to script location
+    full_path = (script_dir / path).resolve()
+    with open(full_path, 'r', encoding='utf-8') as f:
+        return f.read()
+
+
+def build_system_prompt(vulnerabilities, iso_annex, iso_annex_controls_list):
+    """Build the system prompt for the LLM."""
+
+    prompt = f"""You are a security policy expert specializing in ISO 27001 compliance. Your task is to analyze vulnerability scan results and generate comprehensive security policies.
+
+**CONTEXT - ISO 27001 Annex A Controls List:**
+This is the complete list of ISO 27001:2022 Annex A controls available for reference:
+{iso_annex_controls_list}
+
+**CONTEXT - Vulnerability Scan Results:**
+{json.dumps(vulnerabilities, indent=2)}
+
+**YOUR TASK:**
+1. Analyze all vulnerabilities and group them by related security domains
+2. Map each vulnerability group to relevant ISO 27001 Annex A controls (refer to the controls list above for available control numbers)
+3. Rank the controls by severity based on the number and criticality of violations
+4. Generate comprehensive security policies for the top priority areas
+
+**OUTPUT FORMAT:**
+For each policy, provide:
+- **Policy Title:** Clear, descriptive name
+- **ISO 27001 Reference:** Specific Annex A control numbers (use the format A.X.Y from the controls list above)
+- **Severity:** CRITICAL/HIGH/MEDIUM/LOW (based on worst vulnerability in group)
+- **Summary of Vulnerabilities:** List specific vulnerabilities addressed with tool, file, and line numbers where applicable
+- **Policy Content:** Detailed policy requirements and standards
+- **Corrective Actions:** Specific, prioritized steps to remediate
+
+**EXAMPLE OUTPUT:**
+{iso_annex}
+
+Generate 3-10 policies covering the most critical security gaps identified in the vulnerability data. Focus on actionable, evidence-based policies that directly address the discovered vulnerabilities."""
+
+    return prompt
+
+
+def generate_policies(api_key, model, vulnerabilities, iso_annex, iso_annex_controls_list):
+    """Generate policies using OpenRouter API."""
     
-    def __init__(self, model_name: str):
-        self.model_name = model_name
-        self.policies = []
+    # Initialize OpenAI client for OpenRouter
+    try:
+        import httpx
+    except ImportError:
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
+        )
+    else:
+        http_client = httpx.Client(
+            timeout=httpx.Timeout(600.0, connect=10.0),
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+        )
         
-        # Initialize appropriate client
-        if "gpt" in model_name.lower():
-            openai.api_key = os.getenv("OPENAI_API_KEY")
-            self.client_type = "openai"
-        elif "claude" in model_name.lower():
-            self.client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-            self.client_type = "anthropic"
-        elif "deepseek" in model_name.lower() or "llama" in model_name.lower():
-            self.together_api_key = os.getenv("TOGETHER_API_KEY")
-            self.client_type = "together"
-        else:
-            raise ValueError(f"Unknown model: {model_name}")
-            
-    def generate_policies(self, vulnerabilities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Generate policies for all vulnerabilities"""
-        logger.info(f"Generating policies with {self.model_name}...")
-        
-        # Group vulnerabilities by type for batch processing
-        vuln_groups = self._group_vulnerabilities(vulnerabilities)
-        
-        for group_name, vulns in vuln_groups.items():
-            logger.info(f"Processing {len(vulns)} {group_name} vulnerabilities")
-            policy = self._generate_policy_for_group(group_name, vulns)
-            self.policies.append(policy)
-            
-        return self.policies
-        
-    def _group_vulnerabilities(self, vulnerabilities: List[Dict]) -> Dict[str, List[Dict]]:
-        """Group vulnerabilities by title/category"""
-        groups = {}
-        for vuln in vulnerabilities:
-            title = vuln.get("title", "Unknown")
-            if title not in groups:
-                groups[title] = []
-            groups[title].append(vuln)
-        return groups
-        
-    def _generate_policy_for_group(self, group_name: str, vulnerabilities: List[Dict]) -> Dict:
-        """Generate policy for a group of similar vulnerabilities"""
-        
-        # Build context from vulnerabilities
-        context = self._build_context(group_name, vulnerabilities)
-        
-        # Generate policy using appropriate model
-        if self.client_type == "openai":
-            policy_content = self._generate_with_openai(context)
-        elif self.client_type == "anthropic":
-            policy_content = self._generate_with_anthropic(context)
-        elif self.client_type == "together":
-            policy_content = self._generate_with_together(context)
-        else:
-            policy_content = "Error: Unknown client type"
-            
-        # Structure the policy
-        policy = {
-            "vulnerability_group": group_name,
-            "affected_count": len(vulnerabilities),
-            "severity": self._get_max_severity(vulnerabilities),
-            "policy": policy_content,
-            "generated_by": self.model_name,
-            "generated_at": datetime.now().isoformat(),
-            "vulnerabilities": vulnerabilities
-        }
-        
-        return policy
-        
-    def _build_context(self, group_name: str, vulnerabilities: List[Dict]) -> str:
-        """Build context for LLM prompt"""
-        context = f"""You are a security policy expert. Generate a comprehensive security policy for the following vulnerability group.
-
-Vulnerability Type: {group_name}
-Number of Instances: {len(vulnerabilities)}
-Severity: {self._get_max_severity(vulnerabilities)}
-
-Sample Vulnerability Details:
-"""
-        # Add details from first few vulnerabilities
-        for vuln in vulnerabilities[:3]:
-            context += f"""
-- Tool: {vuln.get('tool', 'Unknown')}
-- Type: {vuln.get('type', 'Unknown')}
-- Description: {vuln.get('description', 'No description')}
-- Location: {vuln.get('file', 'Unknown')}:{vuln.get('line', 0)}
-- CWE: {vuln.get('cwe', 'Unknown')}
-- OWASP: {vuln.get('owasp', 'Unknown')}
-"""
-        
-        context += """
-Generate a security policy following this structure:
-
-1. POLICY STATEMENT
-   - Clear, actionable policy statement
-   
-2. SCOPE
-   - What this policy covers
-   - Which systems/components are affected
-   
-3. REQUIREMENTS
-   - Specific technical requirements
-   - Implementation guidelines
-   
-4. COMPLIANCE MAPPING
-   - Map to NIST Cybersecurity Framework (identify relevant functions and categories)
-   - Map to ISO/IEC 27001:2022 (identify relevant controls)
-   - Map to OWASP Top 10 2021 (if applicable)
-   
-5. IMPLEMENTATION GUIDANCE
-   - Step-by-step remediation steps
-   - Code examples or configuration changes (if applicable)
-   - Tools and technologies to use
-   
-6. VERIFICATION
-   - How to verify compliance
-   - Testing procedures
-   
-7. MONITORING & MAINTENANCE
-   - Ongoing monitoring requirements
-   - Review frequency
-
-Make the policy:
-- Clear and actionable for developers
-- Compliant with security standards (NIST CSF, ISO 27001)
-- Specific to the vulnerability type
-- Professional and formal in tone
-"""
-        
-        return context
-        
-    def _generate_with_openai(self, context: str) -> str:
-        """Generate policy using OpenAI GPT-4"""
-        try:
-            response = openai.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a security policy expert specializing in DevSecOps and compliance frameworks."},
-                    {"role": "user", "content": context}
-                ],
-                temperature=0.3,
-                max_tokens=2000
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            logger.error(f"OpenAI API error: {e}")
-            return f"Error generating policy: {e}"
-            
-    def _generate_with_anthropic(self, context: str) -> str:
-        """Generate policy using Claude"""
-        try:
-            message = self.client.messages.create(
-                model="claude-sonnet-4-5-20250929",
-                max_tokens=2000,
-                temperature=0.3,
-                messages=[
-                    {"role": "user", "content": context}
-                ]
-            )
-            return message.content[0].text
-        except Exception as e:
-            logger.error(f"Anthropic API error: {e}")
-            return f"Error generating policy: {e}"
-            
-    def _generate_with_together(self, context: str) -> str:
-        """Generate policy using Together AI (DeepSeek/LLaMA)"""
-        try:
-            url = "https://api.together.xyz/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {self.together_api_key}",
-                "Content-Type": "application/json"
-            }
-            
-            # Use DeepSeek R1 or LLaMA 3.3
-            model = "deepseek-ai/deepseek-r1" if "deepseek" in self.model_name.lower() else "meta-llama/Llama-3.3-70B-Instruct"
-            
-            data = {
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": "You are a security policy expert."},
-                    {"role": "user", "content": context}
-                ],
-                "temperature": 0.3,
-                "max_tokens": 2000
-            }
-            
-            response = requests.post(url, headers=headers, json=data)
-            response.raise_for_status()
-            
-            result = response.json()
-            return result["choices"][0]["message"]["content"]
-            
-        except Exception as e:
-            logger.error(f"Together API error: {e}")
-            return f"Error generating policy: {e}"
-            
-    def _get_max_severity(self, vulnerabilities: List[Dict]) -> str:
-        """Get maximum severity from vulnerability list"""
-        severity_order = {"CRITICAL": 5, "HIGH": 4, "MEDIUM": 3, "LOW": 2, "INFO": 1}
-        max_severity = "INFO"
-        max_value = 0
-        
-        for vuln in vulnerabilities:
-            severity = vuln.get("severity", "INFO")
-            value = severity_order.get(severity, 0)
-            if value > max_value:
-                max_value = value
-                max_severity = severity
-                
-        return max_severity
-        
-    def save_policies(self, output_file: Path):
-        """Save generated policies to file"""
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        
-        output_data = {
-            "metadata": {
-                "model": self.model_name,
-                "total_policies": len(self.policies),
-                "generated_at": datetime.now().isoformat()
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
+            http_client=http_client,
+        )
+    
+    system_prompt = build_system_prompt(vulnerabilities, iso_annex, iso_annex_controls_list)
+    
+    print(f"  DEBUG: Prompt length: {len(system_prompt)} characters")
+    print(f"  DEBUG: Model: {model}")
+    
+    try:
+        completion = client.chat.completions.create(
+            extra_headers={
+                "HTTP-Referer": "https://github.com/DouaeBakkali269/AI-DevSecOps-Project",
+                "X-Title": "ISO 27001 Policy Generator",
             },
-            "policies": self.policies
-        }
+            model=model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": system_prompt
+                }
+            ],
+            temperature=0.7,
+            max_tokens=4000
+        )
         
-        with open(output_file, 'w') as f:
-            json.dump(output_data, f, indent=2)
+        # Debug: Print the full response object
+        print(f"  DEBUG: Response object: {completion}")
+        print(f"  DEBUG: Response model dump: {completion.model_dump_json(indent=2)}")
+        
+        # Check if response was filtered
+        if hasattr(completion, 'choices') and completion.choices:
+            choice = completion.choices[0]
             
-        logger.info(f"Policies saved to {output_file}")
+            # Check for finish_reason
+            if hasattr(choice, 'finish_reason'):
+                print(f"  DEBUG: Finish reason: {choice.finish_reason}")
+                if choice.finish_reason == 'content_filter':
+                    raise ValueError("Response was blocked by content filter")
+            
+            # Check for message content
+            if hasattr(choice, 'message') and choice.message:
+                content = choice.message.content
+                
+                print(f"  DEBUG: Response type: {type(content)}")
+                print(f"  DEBUG: Content is None: {content is None}")
+                
+                if content is not None:
+                    print(f"  DEBUG: Content length: {len(content)}")
+                    print(f"  DEBUG: Content (first 500 chars): {content[:500] if len(content) > 0 else '(empty string)'}")
+                    print(f"  DEBUG: Content repr: {repr(content[:100])}")
+                
+                # Validate that we got content
+                if content is None:
+                    raise ValueError("LLM returned None content. The response may have been filtered or empty.")
+                if not content.strip():
+                    raise ValueError(f"LLM returned empty content. Content type: {type(content)}, length: {len(content) if content else 0}")
+                
+                return content
+            else:
+                raise ValueError("Response has no message content")
+        else:
+            raise ValueError("Response has no choices")
+            
+    except Exception as e:
+        print(f"  ERROR in generate_policies: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
+    finally:
+        # Clean up HTTP client if we created one
+        if 'http_client' in locals():
+            http_client.close()
+
+
+def save_policy(policy_content, output_dir="../results/generated_policies"):
+    """Save generated policy to file with unique timestamp."""
+    # Validate content
+    if policy_content is None:
+        raise ValueError("Cannot save None content to file")
+    if not isinstance(policy_content, str):
+        raise ValueError(f"Expected string content, got {type(policy_content)}")
+    if not policy_content.strip():
+        raise ValueError("Cannot save empty content to file")
+    
+    # Get the directory where this script is located
+    script_dir = Path(__file__).parent
+    # Resolve path relative to script location
+    full_output_dir = (script_dir / output_dir).resolve()
+    
+    # Create output directory if it doesn't exist
+    full_output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Generate unique filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"security_policy_{timestamp}.md"
+    filepath = full_output_dir / filename
+    
+    # Save policy with UTF-8 encoding
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(policy_content)
+    
+    # Verify file was written
+    if not filepath.exists() or filepath.stat().st_size == 0:
+        raise IOError(f"Failed to save policy to {filepath}")
+    
+    return str(filepath)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate security policies using LLMs")
-    parser.add_argument("--model", required=True, 
-                       choices=["gpt-4", "claude-sonnet-4.5", "deepseek-r1", "llama-3.3"],
-                       help="LLM model to use")
-    parser.add_argument("--input", required=True, help="Input JSON file with vulnerabilities")
-    parser.add_argument("--output", required=True, help="Output JSON file for policies")
+    # Load environment variables from .env file if it exists
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent
+    current_dir = Path.cwd()
+    
+    # Try multiple locations for .env file
+    env_files = [
+        project_root / ".env",
+        script_dir / ".env",
+        current_dir / ".env",
+    ]
+    
+    env_loaded = False
+    for env_file in env_files:
+        if env_file.exists():
+            load_dotenv(env_file, override=False)
+            env_loaded = True
+            break
+    
+    if not env_loaded:
+        load_dotenv(override=False)
+    
+    parser = argparse.ArgumentParser(
+        description="Generate ISO 27001 security policies from vulnerability scans"
+    )
+    parser.add_argument(
+        "--model",
+        default="openai/gpt-4o-mini",  # Changed to a more reliable model
+        help="OpenRouter model to use (default: openai/gpt-4o-mini)"
+    )
+    parser.add_argument(
+        "--api-key",
+        default=os.getenv("OPENROUTER_API_KEY"),
+        help="OpenRouter API key (default: from .env file or OPENROUTER_API_KEY env var)"
+    )
+    parser.add_argument(
+        "--vulnerabilities",
+        default="../results/parsed_data/vulnerabilities.json",
+        help="Path to vulnerabilities JSON file"
+    )
+    parser.add_argument(
+        "--iso-annex",
+        default="../reference-policies/iso27001_templates.json",
+        help="Path to ISO 27001 Annex A reference file"
+    )
+    parser.add_argument(
+        "--iso-annex-controls",
+        default="../docs/ISO27001-AnnexA.txt",
+        help="Path to ISO 27001 Annex A controls list text file"
+    )
+    parser.add_argument(
+        "--output-dir",
+        default="../results/generated_policies",
+        help="Output directory for generated policies"
+    )
     
     args = parser.parse_args()
     
-    # Load vulnerabilities
-    with open(args.input) as f:
-        data = json.load(f)
-        vulnerabilities = data.get("vulnerabilities", [])
+    # Validate API key
+    if not args.api_key:
+        print("ERROR: OpenRouter API key required.")
+        print("  Options:")
+        print("  1. Create a .env file in the project root with: OPENROUTER_API_KEY=your_key_here")
+        print("  2. Set OPENROUTER_API_KEY environment variable")
+        print("  3. Use --api-key command line argument")
+        return 1
     
-    logger.info(f"Loaded {len(vulnerabilities)} vulnerabilities")
+    print(f"Loading vulnerabilities from {args.vulnerabilities}...")
+    try:
+        vulnerabilities = load_vulnerabilities(args.vulnerabilities)
+        print(f"✓ Loaded {vulnerabilities['metadata']['total_vulnerabilities']} vulnerabilities")
+    except FileNotFoundError:
+        print(f"ERROR: Vulnerabilities file not found at {args.vulnerabilities}")
+        return 1
     
-    # Generate policies
-    generator = PolicyGenerator(args.model)
-    generator.generate_policies(vulnerabilities)
-    generator.save_policies(Path(args.output))
+    print(f"Loading ISO 27001 Annex A from {args.iso_annex}...")
+    try:
+        iso_annex = load_iso27001_annex(args.iso_annex)
+        print(f"✓ Loaded ISO 27001 Annex A ({len(iso_annex)} characters)")
+    except FileNotFoundError:
+        print(f"ERROR: ISO 27001 Annex A file not found at {args.iso_annex}")
+        return 1
     
-    logger.info("✅ Policy generation complete!")
+    print(f"Loading ISO 27001 Annex A controls list from {args.iso_annex_controls}...")
+    try:
+        iso_annex_controls_list = load_iso27001_annex_controls(args.iso_annex_controls)
+        print(f"✓ Loaded ISO 27001 Annex A controls list ({len(iso_annex_controls_list)} characters)")
+    except FileNotFoundError:
+        print(f"ERROR: ISO 27001 Annex A controls list file not found at {args.iso_annex_controls}")
+        return 1
+    
+    print(f"\nGenerating policies using model: {args.model}...")
+    try:
+        policy_content = generate_policies(
+            args.api_key,
+            args.model,
+            vulnerabilities,
+            iso_annex,
+            iso_annex_controls_list
+        )
+        print("✓ Policies generated successfully")
+        print(f"  Response length: {len(policy_content)} characters")
+        print(f"  Preview (first 200 chars): {policy_content[:200]}...")
+    except ValueError as e:
+        print(f"ERROR: Validation error - {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+    except Exception as e:
+        print(f"ERROR: Failed to generate policies: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+    
+    print(f"\nSaving policies to {args.output_dir}...")
+    try:
+        filepath = save_policy(policy_content, args.output_dir)
+        print(f"✓ Policies saved to: {filepath}")
+        file_size = Path(filepath).stat().st_size
+        print(f"  File size: {file_size} bytes")
+    except (ValueError, IOError) as e:
+        print(f"ERROR: Failed to save policies: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+    except Exception as e:
+        print(f"ERROR: Unexpected error while saving: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+    
+    print("\n" + "="*60)
+    print("POLICY GENERATION COMPLETE")
+    print("="*60)
+    print(f"Model used: {args.model}")
+    print(f"Output file: {filepath}")
+    
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    exit(main())
