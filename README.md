@@ -84,16 +84,13 @@ ai-devsecops-project/
 ### 1. Security Scanning Tools
 
 **SAST (Static Application Security Testing):**
-- **Semgrep**: Multi-language static analysis
-- **NodeJsScan**: Node.js specific vulnerabilities
-- **npm audit**: Dependency vulnerabilities
+    -**CodeQL**: GitHub's semantic code analysis engine
 
 **SCA (Software Composition Analysis):**
-- **npm audit**: Known vulnerabilities in dependencies
-- **Snyk**: Comprehensive dependency scanning
+    - **Snyk**: Comprehensive dependency scanning
 
 **DAST (Dynamic Application Security Testing):**
-- **OWASP ZAP**: Web application vulnerability scanner
+    - **OWASP ZAP**: Web application vulnerability scanner
 
 ### 2. LLM Models (Comparative Study)
 
