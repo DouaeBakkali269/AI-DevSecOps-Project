@@ -124,18 +124,19 @@ jobs:
           echo "✅ CodeQL SARIF report created"
           ls -lh results/scan_reports/codeql_report.sarif
           
-          # Show summary
-          python3 << 'PYTHON_SCRIPT'
+         # Show summary
+        python3 -c '
 import json
 try:
-    with open('results/scan_reports/codeql_report.sarif') as f:
+    with open("results/scan_reports/codeql_report.sarif") as f:
         data = json.load(f)
-    runs = data.get('runs', [])
+    runs = data.get("runs", [])
     if runs:
-        results = runs[0].get('results', [])
+        results = runs[0].get("results", [])
         print(f"📊 CodeQL found {len(results)} potential issues")
 except Exception as e:
     print(f"⚠️  Could not parse SARIF: {e}")
+'
 PYTHON_SCRIPT
         else
           echo "⚠️ CodeQL SARIF report not found"
