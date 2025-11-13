@@ -258,22 +258,31 @@ class VulnerabilityParser:
         """Parse Snyk SCA report"""
         with open(file_path) as f:
             data = json.load(f)
+        
+        # Handle both single project (dict) and multi-project (list) formats
+        projects = data if isinstance(data, list) else [data]
+        
+        for project in projects:
+            project_name = project.get("projectName", "unknown")
+            vulnerabilities = project.get("vulnerabilities", [])
             
-        for vuln in data.get("vulnerabilities", []):
-            vulnerability = {
-                "tool": "Snyk",
-                "type": "SCA",
-                "title": vuln.get("title", ""),
-                "severity": vuln.get("severity", "medium").upper(),
-                "description": vuln.get("description", ""),
-                "package": vuln.get("packageName", ""),
-                "version": vuln.get("version", ""),
-                "fixed_in": vuln.get("fixedIn", []),
-                "cwe": vuln.get("identifiers", {}).get("CWE", [""])[0],
-                "owasp": "A06:2021 - Vulnerable Components",
-                "recommendation": f"Upgrade to {', '.join(vuln.get('fixedIn', ['latest']))}"
-            }
-            self.vulnerabilities.append(vulnerability)
+            for vuln in vulnerabilities:
+                vulnerability = {
+                    "tool": "Snyk",
+                    "type": "SCA",
+                    "title": vuln.get("title", vuln.get("id", "")),
+                    "severity": vuln.get("severity", "medium").upper(),
+                    "description": vuln.get("description", "")[:200] if vuln.get("description") else "",
+                    "package": vuln.get("packageName", vuln.get("moduleName", "")),
+                    "version": vuln.get("version", ""),
+                    "fixed_in": vuln.get("fixedIn", []),
+                    "cwe": vuln.get("identifiers", {}).get("CWE", [""])[0] if vuln.get("identifiers") else "",
+                    "cvss_score": vuln.get("cvssScore", 0),
+                    "owasp": "A06:2021 - Vulnerable Components",
+                    "recommendation": f"Upgrade to {', '.join(vuln.get('fixedIn', ['latest']))}" if vuln.get('fixedIn') else "Review Snyk recommendations",
+                    "project": project_name
+                }
+                self.vulnerabilities.append(vulnerability)
             
     def _parse_zap_json(self, file_path: Path):
         """Parse OWASP ZAP JSON report"""
