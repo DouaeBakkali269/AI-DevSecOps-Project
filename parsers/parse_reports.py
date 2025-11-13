@@ -181,7 +181,7 @@ class VulnerabilityParser:
         import traceback
         traceback.print_exc()
 
-    def _map_codeql_level(self, level: str) -> str:
+def _map_codeql_level(self, level: str) -> str:
     """Map CodeQL severity levels to standard levels"""
     mapping = {
         "error": "HIGH",
@@ -191,7 +191,7 @@ class VulnerabilityParser:
     }
     return mapping.get(level.lower(), "MEDIUM")
 
-    def _extract_cwe_from_codeql(self, result: dict) -> str:
+def _extract_cwe_from_codeql(self, result: dict) -> str:
     """Extract CWE from CodeQL result"""
     # Check properties for CWE tags
     properties = result.get("properties", {})
@@ -219,7 +219,7 @@ class VulnerabilityParser:
     
     return "CWE-Unknown"
 
-    def _get_codeql_recommendation(self, result: dict) -> str:
+def _get_codeql_recommendation(self, result: dict) -> str:
     """Get recommendation from CodeQL result"""
     # Try to get help text
     message = result.get("message", {})
@@ -228,7 +228,7 @@ class VulnerabilityParser:
     if help_text:
         return f"Review and remediate: {help_text[:200]}"
     
-    return "Review CodeQL findings and apply secure coding practices"       
+    return "Review CodeQL findings and apply secure coding practices"      
     def _parse_npm_audit(self, file_path: Path):
         """Parse npm audit SCA report"""
         with open(file_path) as f:
