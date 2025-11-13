@@ -33,40 +33,58 @@ jobs:
         pip install -r requirements.txt
         cd app/juice-shop && npm install
     
-    # ==================== SAST Scanning ====================
+     # ==================== SAST Scanning - CodeQL ====================
     
-    - name: Run Semgrep (SAST)
-      run: |
-        pip install semgrep
-        semgrep --config=auto app/juice-shop \
-          --json --output results/scan_reports/semgrep_report.json || true
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: javascript
+        queries: security-and-quality
     
-    - name: Run NodeJsScan (SAST)
-      run: |
-        pip install nodejsscan
-        nodejsscan -d app/juice-shop -o results/scan_reports/nodejsscan_report.json || true
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:javascript"
+        output: results/scan_reports
+        upload: false
     
-    - name: Run Bandit (SAST - if Python code exists)
+    - name: Export CodeQL Results to SARIF
       run: |
-        bandit -r app/juice-shop -f json -o results/scan_reports/bandit_report.json || true
+        # Find and copy CodeQL SARIF results
+        mkdir -p results/scan_reports
+        find . -name "*.sarif" -type f -exec cp {} results/scan_reports/codeql_report.sarif \; || true
+        
+        # Verify the file exists
+        if [ -f results/scan_reports/codeql_report.sarif ]; then
+          echo "✅ CodeQL SARIF report created"
+          ls -lh results/scan_reports/codeql_report.sarif
+        else
+          echo "⚠️ CodeQL SARIF report not found"
+        fi
+    
+     # ==================== SCA Scanning - Snyk ====================
+    
+    - name: Run Snyk Security Scan (SCA)
+      uses: snyk/actions/node@master
       continue-on-error: true
-    
-    # ==================== SCA Scanning ====================
-    
-    - name: Run npm audit (SCA)
-      run: |
-        cd app/juice-shop
-        npm audit --json > ../../results/scan_reports/npm_audit_report.json || true
-    
-    - name: Run Snyk (SCA)
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        command: test
+        args: --all-projects --json-file-output=results/scan_reports/snyk_report.json
+        json: true
+    
+    - name: Verify Snyk Results
       run: |
-        npm install -g snyk
-        snyk auth $SNYK_TOKEN
-        cd app/juice-shop
-        snyk test --json > ../../results/scan_reports/snyk_report.json || true
-      continue-on-error: true
+        if [ -f results/scan_reports/snyk_report.json ]; then
+          echo "✅ Snyk scan completed successfully"
+          # Show summary
+          python3 -c "import json; data=json.load(open('results/scan_reports/snyk_report.json')); print(f'Vulnerabilities found: {len(data.get(\"vulnerabilities\", []))}')" || true
+        else
+          echo "⚠️ Snyk report not found, but continuing..."
+          # Create empty report to avoid parser errors
+          echo '{"vulnerabilities":{}}' > results/scan_reports/snyk_report.json
+        fi
     
     # ==================== DAST Scanning ====================
     
