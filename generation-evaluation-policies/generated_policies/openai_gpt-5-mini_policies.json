@@ -1,0 +1,193 @@
+{
+  "standard": "ISO/IEC 27001:2022",
+  "policies": [
+    {
+      "control_id": "A.8.26",
+      "domain": "Technological Controls",
+      "title": "Application Security Requirements and Secure Coding",
+      "severity": "HIGH",
+      "policy_text": "All applications must be developed and maintained to mitigate common web vulnerabilities (including SQL injection and XSS) by applying secure design, secure coding standards, and automated and manual security testing throughout the SDLC. Input validation, output encoding, parameterized queries/ORMs, and context-aware escaping must be mandatory. Security requirements should be documented, reviewed, and enforced prior to production release.",
+      "vulnerabilities": [
+        "Semgrep (SAST): SQL Injection in routes/search.js at line 45",
+        "Semgrep (SAST): XSS in routes/profile.js at line 23",
+        "OWASP ZAP (DAST): SQL Injection reported (application-level dynamic test)",
+        "OWASP ZAP (DAST): Cross-Site Scripting reported (application-level dynamic test)"
+      ],
+      "implementation_requirements": [
+        "Adopt organization secure coding standard (OWASP Top 10 guidance incorporated)",
+        "Use parameterized queries or ORM-provided query builders for all DB access",
+        "Enforce input validation and strict whitelisting by data type and length",
+        "Apply output encoding based on output context (HTML, JS, URL, JSON)",
+        "Integrate SAST rules (Semgrep or equivalent) into developer IDEs and CI pipelines",
+        "Mandate peer code review with explicit security checklist for all PRs touching input/output or DB logic",
+        "Document and apply secure default configurations and libraries"
+      ],
+      "verification_methods": [
+        "Review PRs for secure-coding checklist signoff",
+        "SAST (Semgrep) scan results for new commits and pull requests",
+        "Compare remediation evidence to code changes at routes/search.js and routes/profile.js",
+        "Periodic manual code inspections focused on input handling and DB access",
+        "Track metrics: number of security defects found pre- and post-deployment"
+      ]
+    },
+    {
+      "control_id": "A.8.29",
+      "domain": "Technological Controls",
+      "title": "Security Testing in Development and Acceptance",
+      "severity": "HIGH",
+      "policy_text": "Security testing (SAST, DAST, SCA) must be integrated at defined stages: local development, CI/CD pre-merge, pre-release acceptance, and production monitoring. Test results must be triaged, prioritized, and remediated according to risk-based SLAs before production deployment except where documented compensating controls and formal risk acceptance exist.",
+      "vulnerabilities": [
+        "Semgrep (SAST): SQL Injection in routes/search.js at line 45",
+        "Semgrep (SAST): XSS in routes/profile.js at line 23",
+        "OWASP ZAP (DAST): SQL Injection and XSS findings",
+        "npm audit (SCA): Vulnerable package: express",
+        "npm audit (SCA): Vulnerable package: jsonwebtoken"
+      ],
+      "implementation_requirements": [
+        "Integrate SAST (e.g., Semgrep) into pre-merge CI checks with failing pipeline on defined severity thresholds",
+        "Automate DAST scans (e.g., OWASP ZAP) against staging environments prior to production release",
+        "Run SCA (npm audit or SBOM-based tools) on every build and fail build for configurable high/critical findings",
+        "Define and document triage workflow and SLA (e.g., CRITICAL: 24 hours, HIGH: 7 days)",
+        "Maintain test environments that mirror production for realistic DAST/pen-test results",
+        "Schedule regular manual penetration tests and include remediation tracking"
+      ],
+      "verification_methods": [
+        "CI/CD pipeline logs showing SAST/SCA/DAST results and remediation history",
+        "Triage/issue tracker evidence with SLAs and remediation tickets",
+        "Pre-release DAST reports for staging environments",
+        "Trend reports of vulnerabilities detected and closed over time",
+        "Penetration test reports and validation of remediation"
+      ]
+    },
+    {
+      "control_id": "A.8.8",
+      "domain": "Technological Controls",
+      "title": "Management of Technical Vulnerabilities and Patch/Dependency Management",
+      "severity": "CRITICAL",
+      "policy_text": "The organization shall operate a formal technical vulnerability management program covering discovery, risk-based assessment, prioritization, remediation, verification and reporting of vulnerabilities in code, dependencies and infrastructure. All third-party components and libraries must be tracked (SBOM), updated, or mitigated according to severity SLAs. Critical vulnerabilities must be remediated or mitigated immediately and documented with compensating controls if not remediated within SLA.",
+      "vulnerabilities": [
+        "npm audit (SCA): Vulnerable package: express (HIGH)",
+        "npm audit (SCA): Vulnerable package: jsonwebtoken (HIGH)",
+        "Aggregate scan summary: metadata indicates 1 CRITICAL and multiple HIGH findings requiring remediation prioritization"
+      ],
+      "implementation_requirements": [
+        "Maintain an up-to-date SBOM for all applications and services",
+        "Subscribe to CVE/NVD and vendor security advisories; integrate alerts into ticketing",
+        "Automate SCA in CI to detect vulnerable packages (e.g., npm audit, Snyk, OSS Index)",
+        "Define and enforce remediation SLAs: CRITICAL (24–72h), HIGH (7d), MEDIUM (30d), LOW (90d)",
+        "Implement emergency patch/rollback procedures and compensating controls for unpatchable dependencies",
+        "Use dependency pinning, automated dependency update pipelines, and staged rollouts"
+      ],
+      "verification_methods": [
+        "SBOM reviews and comparison to deployed inventories",
+        "SCA scan reports and remediation ticket tracking",
+        "Audit of SLA compliance for vulnerability remediation",
+        "Evidence of compensating controls where patches are delayed",
+        "Periodic review of subscribed advisory feed handling"
+      ]
+    },
+    {
+      "control_id": "A.8.23",
+      "domain": "Technological Controls",
+      "title": "Web Application Protection and Edge Controls (WAF, Headers, CSP)",
+      "severity": "HIGH",
+      "policy_text": "Deploy and maintain layered web protections including Web Application Firewall (WAF), security response headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options), input/output protections, and rate limiting to reduce exposure to web-based attacks (XSS, injection). WAF rules and header policies must be reviewed and updated after security testing and incidents.",
+      "vulnerabilities": [
+        "Semgrep (SAST): XSS in routes/profile.js at line 23",
+        "OWASP ZAP (DAST): Cross-Site Scripting identified",
+        "Semgrep (SAST) & OWASP ZAP: SQL Injection findings"
+      ],
+      "implementation_requirements": [
+        "Deploy a tuned WAF in front of web applications with logging and blocking for OWASP Top 10 vectors",
+        "Configure security headers by default (Content-Security-Policy, Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, Referrer-Policy)",
+        "Ensure response encoding and CSP policies cover application contexts",
+        "Implement rate limiting, bot protections, and IP reputation checks",
+        "Establish WAF rule-change and exception process with testing in staging"
+      ],
+      "verification_methods": [
+        "WAF logs showing blocked attacks and tuning actions",
+        "Automated scans verifying correct security header presence and CSP effectiveness",
+        "DAST reports pre- and post-WAF deployment showing reduction in detected issues",
+        "Change logs and approval records for WAF rule updates"
+      ]
+    },
+    {
+      "control_id": "A.8.5",
+      "domain": "Technological Controls",
+      "title": "Secure Authentication and Session Management",
+      "severity": "HIGH",
+      "policy_text": "Authentication mechanisms and token handling must follow secure design: use vetted libraries, short-lived tokens, strong signing algorithms, rotate keys, validate tokens server-side, and protect against token replay and injection. Libraries for authentication (e.g., jsonwebtoken) must be maintained and any vulnerabilities addressed per the vulnerability management policy.",
+      "vulnerabilities": [
+        "npm audit (SCA): Vulnerable package: jsonwebtoken (HIGH)",
+        "Potential token-related issues implied by use of vulnerable JWT library (npm audit)"
+      ],
+      "implementation_requirements": [
+        "Use up-to-date, actively maintained authentication libraries and monitor CVEs for them",
+        "Enforce short token lifetimes and refresh tokens with secure rotation",
+        "Validate tokens using server-side verification and appropriate algorithm checks (avoid 'none' or weak algs)",
+        "Store signing keys securely (KMS or Vault), rotate regularly, and restrict access",
+        "Include authentication test cases (unit, integration, and DAST) in CI/CD"
+      ],
+      "verification_methods": [
+        "SCA reports proving jsonwebtoken versions are patched or mitigated",
+        "Code review evidence for token validation and algorithm enforcement",
+        "Key rotation logs and access control audits for secret stores",
+        "Authentication-focused security test reports"
+      ]
+    },
+    {
+      "control_id": "A.5.21",
+      "domain": "Organizational Controls",
+      "title": "Managing Information Security in the ICT Supply Chain",
+      "severity": "HIGH",
+      "policy_text": "Third-party components, libraries, and services used in development and production must be subject to security assessment, contractual security requirements, and lifecycle management. Procurement and supplier onboarding must include security requirements, SBOM exchange, vulnerability reporting expectations, and remediation commitments.",
+      "vulnerabilities": [
+        "npm audit (SCA): Vulnerable package: express (HIGH)",
+        "npm audit (SCA): Vulnerable package: jsonwebtoken (HIGH)",
+        "SCA metadata: 4 SCA findings across codebase"
+      ],
+      "implementation_requirements": [
+        "Include security clauses in supplier and OSS usage policies requiring timely disclosure of vulnerabilities",
+        "Require SBOMs for third-party components and verify them during procurement",
+        "Mandate SCA scans for third-party components before acceptance into production",
+        "Define escalation path with suppliers for critical vulnerability remediation",
+        "Maintain inventory of third-party dependencies and versions"
+      ],
+      "verification_methods": [
+        "Supplier contracts and security requirement clauses",
+        "SBOM presence and reconciliation with deployed artifacts",
+        "SCA scan history and supplier remediation confirmations",
+        "Periodic audits of third-party component inventories"
+      ]
+    },
+    {
+      "control_id": "A.8.12",
+      "domain": "Technological Controls",
+      "title": "Data Leakage Prevention and Secure Error Handling",
+      "severity": "MEDIUM",
+      "policy_text": "Applications must prevent accidental or malicious disclosure of sensitive information. Logs, error messages, and API responses must not expose secrets or internal details. Debugging features must be disabled in production. Secrets must be managed via vaults and not hardcoded. Sensitive fields must be masked in logs and transmitted only over encrypted channels.",
+      "vulnerabilities": [
+        "General findings from scans indicate web application exposures (XSS/SQLi) that could lead to data leakage if exploited",
+        "SAST/DAST findings (Semgrep, OWASP ZAP) showing input/output handling issues which may reveal data"
+      ],
+      "implementation_requirements": [
+        "Implement secrets management (HashiCorp Vault, cloud KMS) and remove hardcoded credentials",
+        "Mask or redact sensitive fields in logs and telemetry",
+        "Apply generic error messages to end-users; detailed errors logged to secure stores",
+        "Run automated checks for accidental secrets in repositories (e.g., git-secrets)",
+        "Ensure all transport uses TLS and verify certificate configurations"
+      ],
+      "verification_methods": [
+        "Log review to confirm no sensitive data present",
+        "Secrets scanning reports for code repositories",
+        "Configuration checks for debug flags and error verbosity in production",
+        "DLP or audit logs showing blocked exfiltration attempts"
+      ]
+    }
+  ],
+  "metadata": {
+    "model": "openai/gpt-5-mini",
+    "total_policies": 7,
+    "generated_at": "2025-11-13T13:48:27.270616Z"
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "standard": "ISO/IEC 27001:2022",
+  "policies": [
+    {
+      "control_id": "A.8.25",
+      "domain": "Technological Controls",
+      "title": "Secure Development Lifecycle for Application Security",
+      "severity": "HIGH",
+      "policy_text": "The organization shall embed security into the software development lifecycle (SDLC) from design to deployment and operations. All new features must undergo threat modeling during design, and secure coding standards must be enforced through automated SAST checks in CI/CD. All code changes must pass secure code reviews with security sign-off prior to production deployment. Static and dynamic security testing (SAST and DAST) shall be performed in development and pre-production environments, with results tracked in a remediation workflow. Vulnerabilities identified (especially injection and scripting flaws) must be prioritized and remediated before release, and developers shall receive ongoing secure coding training. Security requirements shall be documented in project charters and traceable through to production live environments.",
+      "vulnerabilities": [
+        "SQL Injection vulnerability detected in routes/search.js (Semgrep SAST, HIGH, line 45)",
+        "XSS vulnerability detected in routes/profile.js (Semgrep SAST, HIGH, line 23)",
+        "SQL Injection may be possible discovered by OWASP ZAP (DAST, HIGH)",
+        "Cross-Site Scripting (XSS) detected by OWASP ZAP (DAST, HIGH)"
+      ],
+      "implementation_requirements": [
+        "Integrate SAST/DAST into CI/CD pipelines for all applications",
+        "Adopt threat modeling as a standard design activity for new features",
+        "Document and enforce secure coding standards in development guidelines",
+        "Mandate secure code reviews with security sign-off before production",
+        "Maintain a vulnerability remediation backlog with SLAs by severity",
+        "Provide ongoing secure coding training for developers"
+      ],
+      "verification_methods": [
+        "Review CI/CD SAST/DAST configurations and results",
+        "Audit threat modeling artifacts and sign-offs",
+        "Inspect code review records and security sign-off status",
+        "Verify remediation backlog and SLA adherence",
+        "Assess training records for developers"
+      ]
+    },
+    {
+      "control_id": "A.8.29",
+      "domain": "Technological Controls",
+      "title": "Security Testing in Software Development and Acceptance",
+      "severity": "HIGH",
+      "policy_text": "All software changes shall undergo comprehensive security testing in development and acceptance environments before production deployment. The testing program must include SAST, DAST, and manual security testing for critical components, with test results recorded and linked to remediation actions. Critical and high-risk vulnerabilities identified during testing must be fixed and re-tested prior to production release. Testing coverage shall be documented, and acceptance criteria must explicitly include security controls and pass criteria. Security testing findings must feed back into the SDLC for continuous improvement.",
+      "vulnerabilities": [
+        "SQL Injection vulnerability detected in routes/search.js (Semgrep SAST, HIGH, line 45)",
+        "XSS vulnerability detected in routes/profile.js (Semgrep SAST, HIGH, line 23)",
+        "SQL Injection may be possible (OWASP ZAP DAST, HIGH)",
+        "Cross-Site Scripting (XSS) detected (OWASP ZAP DAST, HIGH)"
+      ],
+      "implementation_requirements": [
+        "Enforce CI/CD gates requiring SAST and DAST pass with remediation for HIGH/CRITICAL findings",
+        "Ensure staging/acceptance environments mimic production for accurate testing",
+        "Establish formal security acceptance criteria tied to deployment approvals",
+        "Maintain test evidence and defect tracking across remediation cycle",
+        "Schedule periodic penetration testing for high-risk applications"
+      ],
+      "verification_methods": [
+        "Review security test reports and remediation evidence",
+        "Verify that no HIGH/CRITICAL findings remain unresolved prior to deployment",
+        "Audit testing coverage across all code paths and components",
+        "Verify that production deployments follow security acceptance criteria"
+      ]
+    },
+    {
+      "control_id": "A.8.8",
+      "domain": "Technological Controls",
+      "title": "Technical Vulnerability Management for Third-Party Components",
+      "severity": "HIGH",
+      "policy_text": "The organization shall implement a formal technical vulnerability management program for third-party components and libraries. Maintain an up-to-date software bill of materials (SBOM) for all software, identify vulnerable versions (e.g., npm packages), and apply remediation within defined SLAs based on severity. Integrate Software Composition Analysis (SCA) into CI/CD to continuously monitor dependencies (including Express and jsonwebtoken). Remediation progress must be tracked, with re-testing performed after patches. Establish exception processes for non-remediable risks and document risk acceptance where necessary.",
+      "vulnerabilities": [
+        "Vulnerable: express (npm audit, HIGH)",
+        "Vulnerable: jsonwebtoken (npm audit, HIGH)"
+      ],
+      "implementation_requirements": [
+        "Enable and enforce SCA in CI/CD (e.g., npm audit, Snyk, or equivalent) for all dependencies",
+        "Maintain an SBOM and inventory of all third-party libraries",
+        "Define and enforce patching SLAs by severity (e.g., Critical/High within 24-72 hours, Medium within 7-14 days)",
+        "Automate remediation tracking and re-testing after patches",
+        "Establish a process to evaluate and approve exceptions for critical components"
+      ],
+      "verification_methods": [
+        "Review dependency scan results and SBOM records",
+        "Audit patch deployment timelines and remediation statuses",
+        "Verify re-testing and closure of remediation tickets",
+        "Inspect exception/risk acceptance records"
+      ]
+    },
+    {
+      "control_id": "A.5.19",
+      "domain": "Organizational Controls",
+      "title": "Information Security in Supplier Relationships",
+      "severity": "HIGH",
+      "policy_text": "The organization shall manage information security risks arising from supplier relationships, including ICT supply chain dependencies. Security requirements must be defined in procurement contracts, with rights to audit, ongoing monitoring of supplier security posture, and clear expectations for vulnerability remediation. Suppliers providing software components must supply security documentation (e.g., SBOMs, vulnerability management commitments) and adhere to security testing practices. Third-party software components used by applications shall be subject to security assessment and ongoing monitoring aligned with organizational risk tolerance.",
+      "vulnerabilities": [
+        "Vulnerable: express (npm audit, HIGH)",
+        "Vulnerable: jsonwebtoken (npm audit, HIGH)"
+      ],
+      "implementation_requirements": [
+        "Incorporate security requirements into supplier contracts and procurement documentation",
+        "Require SBOMs and evidence of vulnerability management from suppliers",
+        "Include security testing and remediation obligations in supplier SLAs",
+        "Implement ongoing supplier security assessments and monitoring",
+        "Establish rights to audit supplier security practices"
+      ],
+      "verification_methods": [
+        "Review supplier contracts and security annexes",
+        "Check for SBOM availability and vulnerability management evidence",
+        "Audit supplier remediation performance and incident response",
+        "Verify ongoing supplier security monitoring dashboards"
+      ]
+    }
+  ],
+  "metadata": {
+    "model": "openai/gpt-5-nano",
+    "total_policies": 4,
+    "generated_at": "2025-11-13T16:13:08.818387Z"
+  }
+}

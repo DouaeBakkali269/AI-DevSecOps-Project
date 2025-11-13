@@ -1,0 +1,143 @@
+{
+  "standard": "ISO/IEC 27001:2022",
+  "policies": [
+    {
+      "control_id": "A.8.25",
+      "domain": "Technological Controls",
+      "title": "Secure Development Lifecycle",
+      "severity": "HIGH",
+      "policy_text": "The organization shall integrate security into all stages of the software development lifecycle, including requirements analysis, design, coding, testing, deployment, and maintenance. Developers must follow secure coding practices to prevent common vulnerabilities such as SQL injection and cross-site scripting. All code changes must undergo peer review and automated security analysis. Secure coding guidelines must be documented and enforced, including input validation, parameterized queries for database interactions, and output encoding for web content. Third-party components must be evaluated for security risks before integration. The development process must include regular security training for developers.",
+      "vulnerabilities": [
+        "SQL injection vulnerability detected in routes/search.js line 45 (Semgrep SAST)",
+        "XSS vulnerability in routes/profile.js line 23 (Semgrep SAST)",
+        "SQL injection may be possible (OWASP ZAP DAST)",
+        "Cross-Site Scripting is possible (OWASP ZAP DAST)"
+      ],
+      "implementation_requirements": [
+        "Develop and distribute secure coding standards",
+        "Integrate SAST tools like Semgrep into CI/CD pipelines",
+        "Mandate parameterized queries and input sanitization in code",
+        "Require output escaping and CSP implementation for web apps",
+        "Conduct regular developer security training sessions",
+        "Perform code reviews with security checklists"
+      ],
+      "verification_methods": [
+        "Review secure coding guidelines and training records",
+        "Audit CI/CD pipeline integration of SAST tools",
+        "Examine code review logs for security checks",
+        "Conduct manual code inspections for high-risk areas"
+      ]
+    },
+    {
+      "control_id": "A.8.29",
+      "domain": "Technological Controls",
+      "title": "Security Testing in Development and Acceptance",
+      "severity": "HIGH",
+      "policy_text": "The organization shall perform security testing at multiple stages of development and before acceptance into production. Static application security testing (SAST) must be conducted on source code, dynamic application security testing (DAST) on running applications, and interactive testing where appropriate. Tests must cover common web vulnerabilities including SQL injection and XSS. Results must be reviewed, risks assessed, and remediation plans created. No code may be deployed to production without passing security tests. Retesting must occur after remediation to confirm fixes.",
+      "vulnerabilities": [
+        "SQL injection vulnerability detected in routes/search.js line 45 (Semgrep SAST)",
+        "XSS vulnerability in routes/profile.js line 23 (Semgrep SAST)",
+        "SQL injection may be possible (OWASP ZAP DAST)",
+        "Cross-Site Scripting is possible (OWASP ZAP DAST)"
+      ],
+      "implementation_requirements": [
+        "Integrate SAST (e.g., Semgrep) and DAST (e.g., OWASP ZAP) into development workflows",
+        "Define testing criteria and pass/fail thresholds",
+        "Schedule security testing for each release cycle",
+        "Document test results and remediation tracking",
+        "Train testing teams on vulnerability identification",
+        "Use automated reporting for test outcomes"
+      ],
+      "verification_methods": [
+        "Review security test reports from SAST and DAST tools",
+        "Audit testing integration in development processes",
+        "Verify remediation of identified issues before deployment",
+        "Examine retest evidence for resolved vulnerabilities"
+      ]
+    },
+    {
+      "control_id": "A.8.8",
+      "domain": "Technological Controls",
+      "title": "Management of Technical Vulnerabilities",
+      "severity": "HIGH",
+      "policy_text": "The organization shall maintain a vulnerability management process to identify, assess, and remediate technical vulnerabilities in a timely manner. Vulnerabilities in operating systems, applications, and third-party components must be scanned regularly using automated tools. Known vulnerabilities in dependencies like npm packages must be checked via SCA tools such as npm audit. Vulnerabilities must be prioritized based on severity, exploitability, and business impact. Remediation must follow defined timelines, with critical issues addressed within 7 days. Patches and updates must be tested in a staging environment before production deployment. A central vulnerability tracking system must monitor status and report on compliance.",
+      "vulnerabilities": [
+        "Vulnerable: express package (npm audit SCA)",
+        "Vulnerable: jsonwebtoken package (npm audit SCA)"
+      ],
+      "implementation_requirements": [
+        "Subscribe to vulnerability feeds (e.g., NVD, npm security advisories)",
+        "Run SCA scans with npm audit in CI/CD pipelines",
+        "Establish vulnerability prioritization and remediation SLAs",
+        "Implement patch management procedures",
+        "Maintain an inventory of software components and versions",
+        "Conduct quarterly vulnerability assessments"
+      ],
+      "verification_methods": [
+        "Review SCA scan results and remediation logs",
+        "Audit vulnerability tracking system entries",
+        "Verify patch deployment timelines and testing records",
+        "Check compliance reports for overdue vulnerabilities"
+      ]
+    },
+    {
+      "control_id": "A.8.26",
+      "domain": "Technological Controls",
+      "title": "Application Security Requirements",
+      "severity": "HIGH",
+      "policy_text": "The organization shall define security requirements for all applications, ensuring protection against injection attacks, XSS, and insecure dependencies. Requirements must include secure authentication, input validation, output encoding, and dependency management. Applications must be designed with security in mind, incorporating threat modeling. Security must be verified through testing and monitoring. No application may process sensitive data without meeting these requirements. Updates to dependencies must be evaluated for security impacts before implementation.",
+      "vulnerabilities": [
+        "SQL injection vulnerability detected in routes/search.js line 45 (Semgrep SAST)",
+        "XSS vulnerability in routes/profile.js line 23 (Semgrep SAST)",
+        "Vulnerable: express package (npm audit SCA)",
+        "Vulnerable: jsonwebtoken package (npm audit SCA)",
+        "SQL injection may be possible (OWASP ZAP DAST)",
+        "Cross-Site Scripting is possible (OWASP ZAP DAST)"
+      ],
+      "implementation_requirements": [
+        "Document application security requirements in project templates",
+        "Perform threat modeling during design phase",
+        "Enforce requirements via automated checks in development tools",
+        "Integrate dependency security scanning",
+        "Require security sign-off for application releases",
+        "Monitor applications for security compliance post-deployment"
+      ],
+      "verification_methods": [
+        "Review application security requirement documents",
+        "Audit threat modeling outputs",
+        "Examine automated check results in pipelines",
+        "Verify security sign-off records"
+      ]
+    },
+    {
+      "control_id": "A.5.19",
+      "domain": "Organizational Controls",
+      "title": "Information Security in Supplier Relationships",
+      "severity": "HIGH",
+      "policy_text": "The organization shall incorporate information security requirements into relationships with suppliers and third-party providers, including software dependency vendors. Security assessments must be performed on critical suppliers, such as those providing npm packages like express and jsonwebtoken. Contracts must include clauses for vulnerability disclosure, timely patching, and compliance with security standards. Supplier risks must be monitored continuously, with alternatives evaluated for high-risk vendors. Incident reporting and remediation coordination must be defined in agreements.",
+      "vulnerabilities": [
+        "Vulnerable: express package (npm audit SCA)",
+        "Vulnerable: jsonwebtoken package (npm audit SCA)"
+      ],
+      "implementation_requirements": [
+        "Include security clauses in supplier contracts",
+        "Conduct annual security assessments of key suppliers",
+        "Monitor vendor security advisories and updates",
+        "Implement a supplier risk register",
+        "Define escalation procedures for supplier vulnerabilities",
+        "Evaluate open-source dependency maintainers for reliability"
+      ],
+      "verification_methods": [
+        "Review supplier contracts for security terms",
+        "Audit supplier assessment reports",
+        "Check vendor monitoring logs",
+        "Verify risk register updates"
+      ]
+    }
+  ],
+  "metadata": {
+    "model": "x-ai/grok-4-fast",
+    "total_policies": 5,
+    "generated_at": "2025-11-13T13:50:19.284434Z"
+  }
+}

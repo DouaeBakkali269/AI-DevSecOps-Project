@@ -1,0 +1,148 @@
+{
+  "standard": "ISO/IEC 27001:2022",
+  "policies": [
+    {
+      "control_id": "A.8.8",
+      "domain": "Technological Controls",
+      "title": "Management of Technical Vulnerabilities",
+      "severity": "HIGH",
+      "policy_text": "The organization shall establish, implement, and maintain a technical vulnerability management process to identify, assess, and remediate vulnerabilities in information systems. All systems and applications must be regularly scanned for vulnerabilities using multiple tools including SAST, SCA, and DAST. Vulnerabilities must be classified by severity (CRITICAL, HIGH, MEDIUM, LOW) and remediated within defined SLAs: CRITICAL within 24 hours, HIGH within 7 days, MEDIUM within 30 days, LOW within 90 days. Third-party components must be continuously monitored for new vulnerabilities. An inventory of all systems and their vulnerability status must be maintained. Exception processes must require formal risk acceptance by management. Post-remediation verification must confirm fixes without introducing new issues.",
+      "vulnerabilities": [
+        "SQL Injection vulnerability in routes/search.js:45 detected by Semgrep (SAST)",
+        "XSS vulnerability in routes/profile.js:23 detected by Semgrep (SAST)",
+        "SQL Injection detected by OWASP ZAP (DAST)",
+        "Cross-Site Scripting detected by OWASP ZAP (DAST)",
+        "Vulnerable express package detected by npm audit (SCA)",
+        "Vulnerable jsonwebtoken package detected by npm audit (SCA)"
+      ],
+      "implementation_requirements": [
+        "Deploy and configure SAST tools (Semgrep) in CI/CD pipeline",
+        "Implement SCA scanning (npm audit) for all dependencies",
+        "Conduct regular DAST scanning (OWASP ZAP) on applications",
+        "Establish vulnerability tracking system with SLA monitoring",
+        "Create patch management procedures for third-party components",
+        "Define remediation escalation process for overdue items"
+      ],
+      "verification_methods": [
+        "Review vulnerability scan reports from all tools",
+        "Audit remediation timelines against SLAs",
+        "Verify post-remediation testing documentation",
+        "Check vulnerability tracking system completeness",
+        "Assess exception process documentation and approvals"
+      ]
+    },
+    {
+      "control_id": "A.8.26",
+      "domain": "Technological Controls",
+      "title": "Application Security Requirements",
+      "severity": "HIGH",
+      "policy_text": "The organization shall define and implement comprehensive security requirements throughout the application development lifecycle. All applications must implement secure coding standards including input validation, output encoding, and parameterized queries to prevent injection attacks. Security requirements must be identified during the design phase and validated through testing. All user inputs must be validated against strict allow-lists. Database queries must use prepared statements or ORM methods. Output encoding must be applied based on context. Security testing including SAST, DAST, and manual code reviews must be mandatory before production deployment. Applications must implement error handling that does not expose sensitive information.",
+      "vulnerabilities": [
+        "SQL Injection vulnerability in routes/search.js:45 indicates failure to implement parameterized queries",
+        "XSS vulnerability in routes/profile.js:23 indicates lack of output encoding",
+        "OWASP ZAP detection confirms runtime vulnerabilities not caught in development"
+      ],
+      "implementation_requirements": [
+        "Implement secure coding standards with specific injection prevention guidelines",
+        "Integrate SAST tools (Semgrep) into IDE and CI/CD pipeline",
+        "Mandate code security review for all database operations",
+        "Implement input validation framework with allow-listing",
+        "Enforce output encoding for all user-generated content",
+        "Conduct regular developer security training on injection prevention"
+      ],
+      "verification_methods": [
+        "Review secure coding standards documentation",
+        "Audit SAST results for injection vulnerabilities",
+        "Verify code review checklists include injection prevention",
+        "Test input validation with malicious payloads",
+        "Confirm error messages do not expose system details"
+      ]
+    },
+    {
+      "control_id": "A.8.25",
+      "domain": "Technological Controls",
+      "title": "Secure Development Lifecycle",
+      "severity": "HIGH",
+      "policy_text": "The organization shall integrate security into all phases of the software development lifecycle. Security activities must be defined for requirements, design, development, testing, and deployment phases. Threat modeling must be conducted for major features. Security code review must be mandatory for all changes. Automated security testing must be integrated into CI/CD pipelines. Dependencies must be scanned before inclusion. Static and dynamic analysis results must achieve defined quality gates before production release. Security defects must be tracked and resolved before release. Development, test, and production environments must be segregated with appropriate access controls.",
+      "vulnerabilities": [
+        "SQL Injection and XSS vulnerabilities indicate lack of security testing in development",
+        "Vulnerable packages (express, jsonwebtoken) indicate inadequate SCA integration",
+        "Runtime vulnerabilities found by DAST suggest insufficient pre-deployment testing"
+      ],
+      "implementation_requirements": [
+        "Define security checkpoints in SDLC phases",
+        "Integrate SAST (Semgrep) and SCA (npm audit) in build pipeline",
+        "Implement mandatory security code review process",
+        "Conduct threat modeling for application features",
+        "Establish security quality gates for deployments",
+        "Separate development, test, and production environments"
+      ],
+      "verification_methods": [
+        "Review SDLC documentation for security activities",
+        "Audit CI/CD pipeline security tool integration",
+        "Check code review completion records",
+        "Verify threat model documentation",
+        "Confirm environment segregation and access controls"
+      ]
+    },
+    {
+      "control_id": "A.8.7",
+      "domain": "Technological Controls",
+      "title": "Protection against Malware",
+      "severity": "HIGH",
+      "policy_text": "The organization shall implement controls to protect against malicious software including malware in third-party components. All software packages and dependencies must be scanned for known vulnerabilities before inclusion. A whitelist of approved libraries and versions must be maintained. Vulnerable components must be updated or replaced within defined timeframes. Software integrity must be verified using checksums or digital signatures. Malware scanning must be performed on all incoming software. Runtime application self-protection (RASP) should be considered for critical applications. Regular security assessments of the software supply chain must be conducted.",
+      "vulnerabilities": [
+        "Vulnerable express package detected by npm audit (SCA)",
+        "Vulnerable jsonwebtoken package detected by npm audit (SCA)",
+        "Presence of vulnerable packages indicates inadequate malware protection in dependencies"
+      ],
+      "implementation_requirements": [
+        "Implement automated SCA scanning (npm audit) in CI/CD pipeline",
+        "Maintain approved component repository with version control",
+        "Define update procedures for vulnerable dependencies",
+        "Implement package integrity verification (checksums, signatures)",
+        "Configure automated alerts for new vulnerability disclosures",
+        "Establish software supply chain assessment procedures"
+      ],
+      "verification_methods": [
+        "Review SCA scan results and remediation records",
+        "Audit approved component list compliance",
+        "Verify package integrity checks are performed",
+        "Check alerting mechanisms for new vulnerabilities",
+        "Assess supply chain security assessments"
+      ]
+    },
+    {
+      "control_id": "A.8.23",
+      "domain": "Technological Controls",
+      "title": "Web Filtering",
+      "severity": "HIGH",
+      "policy_text": "The organization shall implement controls to protect against web-based threats and attacks. All web applications must implement input validation and output encoding to prevent injection attacks. Security headers including Content Security Policy, X-Frame-Options, X-Content-Type-Options, and HSTS must be configured. Web Application Firewall (WAF) must be deployed to provide defense-in-depth. Request rate limiting must prevent abuse. Parameterized queries must be used for all database operations. User-supplied content must be sanitized before display. Error handling must not expose sensitive information. Regular web penetration testing must validate security controls.",
+      "vulnerabilities": [
+        "SQL Injection detected by OWASP ZAP indicates lack of input filtering",
+        "Cross-Site Scripting detected by OWASP ZAP indicates missing output encoding",
+        "Runtime vulnerabilities demonstrate insufficient web application protection"
+      ],
+      "implementation_requirements": [
+        "Implement and configure Web Application Firewall (WAF)",
+        "Enforce security headers on all web applications",
+        "Deploy input validation and sanitization controls",
+        "Implement output encoding for all user-generated content",
+        "Configure rate limiting and request validation",
+        "Conduct regular web application penetration testing"
+      ],
+      "verification_methods": [
+        "Review WAF configuration and rule sets",
+        "Audit security header implementation",
+        "Test input validation with malicious payloads",
+        "Verify output encoding in templates",
+        "Check penetration test results and remediation"
+      ]
+    }
+  ],
+  "metadata": {
+    "model": "z-ai/glm-4.6",
+    "total_policies": 5,
+    "generated_at": "2025-11-13T13:52:16.769055Z"
+  }
+}

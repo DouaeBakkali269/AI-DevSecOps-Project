@@ -1,0 +1,135 @@
+{
+  "standard": "ISO/IEC 27001:2022",
+  "policies": [
+    {
+      "control_id": "A.8.8",
+      "domain": "Technological Controls",
+      "title": "Management of Technical Vulnerabilities",
+      "severity": "CRITICAL",
+      "policy_text": "The organization shall establish and maintain a technical vulnerability management process to identify, evaluate, and remediate vulnerabilities in information systems. Vulnerability information must be obtained from multiple sources including security advisories, vendor notifications, and automated scanning. All systems must be regularly assessed for vulnerabilities using industry-standard tools. Identified vulnerabilities must be classified according to risk level considering exploitability, business impact, and exposure. Remediation must be prioritized based on risk assessment results. Emergency patches must be applied within defined timeframes for critical vulnerabilities. A remediation tracking system must monitor progress and escalate overdue items. Post-remediation testing must verify successful mitigation without introducing new issues.",
+      "vulnerabilities": [
+        "SQL Injection vulnerability detected in routes/search.js (line 45)",
+        "XSS vulnerability in routes/profile.js (line 23)",
+        "Vulnerable express package",
+        "Vulnerable jsonwebtoken package",
+        "SQL Injection vulnerability detected by OWASP ZAP",
+        "Cross-Site Scripting vulnerability detected by OWASP ZAP"
+      ],
+      "implementation_requirements": [
+        "Subscribe to security advisory feeds (CERT, vendor bulletins)",
+        "Deploy automated vulnerability scanning (SAST, SCA, DAST)",
+        "Conduct monthly vulnerability assessments",
+        "Maintain vulnerability remediation database",
+        "Define SLAs for patch deployment by severity",
+        "Implement exception process for accepted risks"
+      ],
+      "verification_methods": [
+        "Review vulnerability scan results",
+        "Audit patch deployment timelines",
+        "Verify remediation testing procedures",
+        "Check vulnerability database completeness"
+      ]
+    },
+    {
+      "control_id": "A.8.3",
+      "domain": "Technological Controls",
+      "title": "Information Access Restriction",
+      "severity": "HIGH",
+      "policy_text": "The organization shall restrict access to sensitive information and systems based on need-to-know principle. Access control mechanisms must be implemented to prevent unauthorized access. Role-based access control must be enforced. User authentication must be secure. Session management must be implemented to prevent session hijacking. Input validation must be performed to prevent injection attacks.",
+      "vulnerabilities": [
+        "SQL Injection vulnerability detected in routes/search.js (line 45)",
+        "XSS vulnerability in routes/profile.js (line 23)"
+      ],
+      "implementation_requirements": [
+        "Implement role-based access control",
+        "Enforce secure authentication mechanisms",
+        "Implement session management",
+        "Perform input validation",
+        "Use secure protocols for data transfer"
+      ],
+      "verification_methods": [
+        "Review access control configurations",
+        "Audit authentication mechanisms",
+        "Test session management",
+        "Verify input validation"
+      ]
+    },
+    {
+      "control_id": "A.8.23",
+      "domain": "Technological Controls",
+      "title": "Web Filtering",
+      "severity": "HIGH",
+      "policy_text": "The organization shall implement web filtering to protect against web-based threats. Web applications must undergo security testing including automated scanning and manual penetration testing. Input validation must be implemented on all user inputs to prevent injection attacks. Output encoding must prevent cross-site scripting. Content Security Policy headers must restrict resource loading.",
+      "vulnerabilities": [
+        "SQL Injection vulnerability detected by OWASP ZAP",
+        "Cross-Site Scripting vulnerability detected by OWASP ZAP"
+      ],
+      "implementation_requirements": [
+        "Implement web application firewall",
+        "Perform regular security testing",
+        "Enforce input validation",
+        "Implement output encoding",
+        "Use Content Security Policy headers"
+      ],
+      "verification_methods": [
+        "Review web application firewall configurations",
+        "Audit security testing results",
+        "Verify input validation",
+        "Test output encoding"
+      ]
+    },
+    {
+      "control_id": "A.8.26",
+      "domain": "Technological Controls",
+      "title": "Application Security Requirements",
+      "severity": "HIGH",
+      "policy_text": "The organization shall define and implement security requirements throughout the application development lifecycle. Security requirements must be elicited during design phase. Threat modeling must identify potential attack vectors. Secure architecture review must validate security controls. All code must undergo static analysis to detect security flaws.",
+      "vulnerabilities": [
+        "SQL Injection vulnerability detected in routes/search.js (line 45)",
+        "XSS vulnerability in routes/profile.js (line 23)"
+      ],
+      "implementation_requirements": [
+        "Define security requirements in project charter",
+        "Conduct threat modeling for new features",
+        "Integrate SAST tools in IDE and CI/CD",
+        "Perform DAST testing in staging environment",
+        "Schedule annual penetration testing"
+      ],
+      "verification_methods": [
+        "Review security requirements documentation",
+        "Audit threat model completeness",
+        "Check SAST/DAST integration",
+        "Review penetration test results"
+      ]
+    },
+    {
+      "control_id": "A.5.23",
+      "domain": "Organizational Controls",
+      "title": "Information Security for Use of Cloud Services",
+      "severity": "HIGH",
+      "policy_text": "The organization shall establish security requirements for cloud services and verify compliance. All cloud deployments must undergo security assessment. Container images must be scanned for vulnerabilities before deployment. Cloud infrastructure must implement security hardening based on CIS benchmarks.",
+      "vulnerabilities": [
+        "Vulnerable express package",
+        "Vulnerable jsonwebtoken package"
+      ],
+      "implementation_requirements": [
+        "Perform cloud security assessments",
+        "Scan container images with Trivy or Clair",
+        "Implement Infrastructure as Code security scanning",
+        "Enable cloud-native security services",
+        "Deploy Cloud Security Posture Management (CSPM)"
+      ],
+      "verification_methods": [
+        "Review cloud security assessment reports",
+        "Audit container scan results",
+        "Verify IaC security policies",
+        "Check CSPM compliance dashboards"
+      ]
+    }
+  ],
+  "metadata": {
+    "model": "meta-llama/llama-3.3-70b-instruct",
+    "total_policies": 5,
+    "generated_at": "2025-11-13T13:52:02.503035Z"
+  }
+}

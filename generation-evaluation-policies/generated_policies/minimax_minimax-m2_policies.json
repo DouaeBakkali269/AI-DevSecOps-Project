@@ -1,0 +1,167 @@
+{
+  "standard": "ISO/IEC 27001:2022",
+  "policies": [
+    {
+      "control_id": "A.8.8",
+      "domain": "Technological Controls",
+      "title": "Management of Technical Vulnerabilities",
+      "severity": "CRITICAL",
+      "policy_text": "The organization shall establish and maintain a technical vulnerability management process to identify, evaluate, and remediate vulnerabilities in information systems. Vulnerability information must be obtained from multiple sources including security advisories, vendor notifications, and automated scanning (SAST, SCA, DAST). All systems and applications must be regularly assessed for vulnerabilities using industry-standard tools. Identified vulnerabilities must be classified according to risk level considering exploitability, business impact, and exposure. Remediation must be prioritized based on risk assessment results. Emergency patches must be applied within defined timeframes for critical vulnerabilities. A remediation tracking system must monitor progress and escalate overdue items. Post-remediation testing must verify successful mitigation without introducing new issues. Third-party dependencies must be continuously monitored and updated to non-vulnerable versions. Exceptions require documented risk acceptance and compensating controls.",
+      "vulnerabilities": [
+        "Semgrep SAST: SQL Injection in routes/search.js:45",
+        "Semgrep SAST: XSS in routes/profile.js:23",
+        "OWASP ZAP DAST: SQL Injection may be possible",
+        "OWASP ZAP DAST: Cross-Site Scripting is possible",
+        "npm audit SCA: Vulnerable package express (HIGH)",
+        "npm audit SCA: Vulnerable package jsonwebtoken (HIGH)"
+      ],
+      "implementation_requirements": [
+        "Deploy automated vulnerability scanning (SAST, SCA, DAST) and integrate with ticketing",
+        "Subscribe to security advisory feeds (CVE/NVD, vendor bulletins)",
+        "Define SLAs for remediation by severity (e.g., Critical ≤7 days, High ≤14 days)",
+        "Maintain a vulnerability remediation database with ownership and due dates",
+        "Implement dependency update pipeline with automated PRs",
+        "Establish an exception process for accepted risks with compensating controls"
+      ],
+      "verification_methods": [
+        "Review vulnerability scan results and remediation SLAs",
+        "Audit patch deployment timelines and ownership",
+        "Verify dependency update cadence and SCA policy coverage",
+        "Check exception approvals and compensating control effectiveness"
+      ]
+    },
+    {
+      "control_id": "A.8.26",
+      "domain": "Technological Controls",
+      "title": "Application Security Requirements",
+      "severity": "HIGH",
+      "policy_text": "The organization shall define and implement security requirements throughout the application development lifecycle. Security requirements must be elicited during the design phase. Threat modeling must identify potential attack vectors. Secure architecture review must validate security controls. All code must undergo static analysis (SAST) to detect security flaws. Dynamic testing (DAST) must verify runtime security. Penetration testing must validate security before production release. Security regression testing must prevent reintroduction of vulnerabilities. Security metrics must track vulnerability trends. Continuous security monitoring must detect exploitation attempts. Secure coding standards must be enforced through automated checks. Code review must be mandatory before production deployment.",
+      "vulnerabilities": [
+        "Semgrep SAST: SQL Injection in routes/search.js:45",
+        "Semgrep SAST: XSS in routes/profile.js:23",
+        "OWASP ZAP DAST: SQL Injection may be possible",
+        "OWASP ZAP DAST: Cross-Site Scripting is possible"
+      ],
+      "implementation_requirements": [
+        "Define security requirements in project charter and track in backlog",
+        "Conduct threat modeling for new features and high-risk modules",
+        "Integrate SAST tools (e.g., Semgrep) in IDE and CI/CD with mandatory gates",
+        "Perform DAST (e.g., OWASP ZAP) testing in staging before release",
+        "Schedule annual penetration testing and after significant changes",
+        "Implement security regression test suites for SQLi and XSS patterns"
+      ],
+      "verification_methods": [
+        "Review security requirements documentation and threat models",
+        "Audit SAST/DAST integration and gate enforcement",
+        "Review penetration test results and remediation actions",
+        "Check security regression test coverage and pass rates"
+      ]
+    },
+    {
+      "control_id": "A.8.23",
+      "domain": "Technological Controls",
+      "title": "Web Filtering and Secure Web Controls",
+      "severity": "HIGH",
+      "policy_text": "The organization shall implement controls to protect against web-based threats. All web applications must undergo security testing including automated scanning and manual penetration testing. Input validation must be implemented on all user inputs to prevent injection attacks. Output encoding must prevent cross-site scripting. Content Security Policy headers must restrict resource loading. Security headers (HSTS, X-Frame-Options, X-Content-Type-Options) must be configured. Rate limiting must prevent abuse. Session management must implement secure token generation and timeout controls. Web Application Firewall must provide defense-in-depth.",
+      "vulnerabilities": [
+        "Semgrep SAST: SQL Injection in routes/search.js:45",
+        "Semgrep SAST: XSS in routes/profile.js:23",
+        "OWASP ZAP DAST: SQL Injection may be possible",
+        "OWASP ZAP DAST: Cross-Site Scripting is possible"
+      ],
+      "implementation_requirements": [
+        "Implement server-side input validation frameworks and parameterized queries",
+        "Configure security headers on all responses (CSP, HSTS, X-Frame-Options, X-Content-Type-Options)",
+        "Deploy Web Application Firewall (WAF) with rules for SQLi/XSS",
+        "Implement rate limiting and throttling for endpoints",
+        "Use secure session management libraries and short session lifetimes",
+        "Enable CSP and subresource integrity where applicable"
+      ],
+      "verification_methods": [
+        "Conduct DAST scanning and verify closure of findings",
+        "Review security header configurations across domains",
+        "Test WAF rule effectiveness and false positive rates",
+        "Verify rate limiting and session management implementation"
+      ]
+    },
+    {
+      "control_id": "A.8.9",
+      "domain": "Technological Controls",
+      "title": "Configuration Management for Third-Party Components",
+      "severity": "HIGH",
+      "policy_text": "The organization shall manage configurations to ensure only approved and secure software versions are deployed. Third-party components must be inventoried and continuously monitored for known vulnerabilities. Only supported and non-vulnerable versions shall be used. Automated dependency updates must be enforced via CI/CD. Configuration baselines must be documented and version-controlled. Changes must be reviewed and tested before deployment. Emergency change procedures must exist for critical vulnerabilities. Deprecated or end-of-life components must be removed promptly.",
+      "vulnerabilities": [
+        "npm audit SCA: Vulnerable package express (HIGH)",
+        "npm audit SCA: Vulnerable package jsonwebtoken (HIGH)"
+      ],
+      "implementation_requirements": [
+        "Maintain a software bill of materials (SBOM) and dependency inventory",
+        "Integrate SCA scanning (e.g., npm audit) in CI/CD with blocking policies",
+        "Automate dependency updates and security patches via PR workflows",
+        "Document configuration baselines and change management records",
+        "Define emergency change procedures for critical vulnerabilities",
+        "Enforce removal of deprecated/EOL components"
+      ],
+      "verification_methods": [
+        "Review SCA scan results and remediation timelines",
+        "Audit dependency update cadence and coverage",
+        "Check configuration baseline documentation and version control",
+        "Verify emergency change procedures and execution records"
+      ]
+    },
+    {
+      "control_id": "A.8.24",
+      "domain": "Technological Controls",
+      "title": "Use of Cryptography",
+      "severity": "HIGH",
+      "policy_text": "The organization shall implement cryptographic controls to protect information confidentiality and integrity. Only strong, up-to-date cryptographic algorithms and key lengths shall be used. All network communications must use TLS with modern cipher suites. Token signing must use secure algorithms (e.g., RS256) with appropriate key rotation. Secrets must be managed via secure vaults, not hardcoded in source code. Key management must enforce rotation, access controls, and audit logging. Deprecated algorithms (e.g., MD5, SHA1, DES) are prohibited.",
+      "vulnerabilities": [
+        "npm audit SCA: Vulnerable package jsonwebtoken (HIGH) — potential insecure algorithm or key handling"
+      ],
+      "implementation_requirements": [
+        "Enforce TLS for all network communications with modern cipher suites",
+        "Use secure token signing algorithms (e.g., RS256/ES256) and rotate keys regularly",
+        "Implement secrets management (Vault, KMS) and prohibit hardcoded secrets",
+        "Audit cryptographic configurations and dependencies for known weaknesses",
+        "Define key rotation schedules and access policies",
+        "Disable deprecated algorithms and protocols"
+      ],
+      "verification_methods": [
+        "Review cryptographic configurations and dependency versions",
+        "Audit key rotation records and access controls",
+        "Check secrets management deployment and scanning results",
+        "Verify deprecation of weak algorithms"
+      ]
+    },
+    {
+      "control_id": "A.8.15",
+      "domain": "Technological Controls",
+      "title": "Logging and Monitoring",
+      "severity": "MEDIUM",
+      "policy_text": "The organization shall implement logging and monitoring to detect and investigate security events. Security-relevant events must be logged with sufficient detail. Logs must be protected against tampering and retained according to policy. Monitoring must correlate events across sources and alert on suspicious activity. Audit logs must be reviewed regularly. Findings must be investigated and escalated as incidents. Logging must not expose sensitive data.",
+      "vulnerabilities": [
+        "OWASP ZAP DAST: SQL Injection may be possible",
+        "OWASP ZAP DAST: Cross-Site Scripting is possible"
+      ],
+      "implementation_requirements": [
+        "Enable comprehensive application and infrastructure logging",
+        "Deploy centralized log management and correlation (SIEM)",
+        "Configure alerts for injection attempts and abnormal activity",
+        "Protect logs with integrity controls and restricted access",
+        "Define log retention periods and review schedules",
+        "Sanitize logs to avoid sensitive data exposure"
+      ],
+      "verification_methods": [
+        "Review logging configurations and coverage",
+        "Audit alert rules and response timelines",
+        "Check log integrity controls and access restrictions",
+        "Verify log retention compliance and review records"
+      ]
+    }
+  ],
+  "metadata": {
+    "model": "minimax/minimax-m2",
+    "total_policies": 6,
+    "generated_at": "2025-11-13T13:51:13.401989Z"
+  }
+}

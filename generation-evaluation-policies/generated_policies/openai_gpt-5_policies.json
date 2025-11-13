@@ -1,0 +1,141 @@
+{
+  "standard": "ISO/IEC 27001:2022",
+  "policies": [
+    {
+      "control_id": "A.8.26",
+      "domain": "Technological Controls",
+      "title": "Application Security Requirements: Prevent Injection and XSS",
+      "severity": "HIGH",
+      "policy_text": "The organization shall define and enforce application-layer security requirements to prevent injection and cross-site scripting. All database interactions must use parameterized queries or ORM bind variables; dynamic string concatenation in SQL is prohibited. All user-supplied input must be validated server-side using allow-lists, normalization, and length limits; reject or sanitize disallowed input. All data rendered to browsers must use context-aware output encoding or templating engines with auto-escaping; sanitize any rich HTML using approved libraries. A Content Security Policy (CSP) must be enforced to prevent execution of untrusted scripts and limit resource origins; inline scripts require nonces. HTTP security headers (Strict-Transport-Security, X-Content-Type-Options, Referrer-Policy, frame-ancestors in CSP) must be configured. Dangerous code evaluation (e.g., eval, new Function) is prohibited in production code. Error handling must not reflect raw user input; display generic messages while logging details securely. Express applications must use security middleware (e.g., helmet) with hardened defaults.",
+      "vulnerabilities": [
+        "Semgrep (SAST): SQL Injection vulnerability in routes/search.js line 45",
+        "OWASP ZAP (DAST): SQL Injection may be possible",
+        "Semgrep (SAST): XSS vulnerability in routes/profile.js line 23",
+        "OWASP ZAP (DAST): Cross-Site Scripting is possible"
+      ],
+      "implementation_requirements": [
+        "Adopt an ORM or parameterized query libraries (e.g., Sequelize/Prisma/mysql2/pg) and prohibit string-built SQL via lint rules",
+        "Implement centralized input validation using joi/express-validator with allow-lists and size limits",
+        "Use templating with auto-escaping (e.g., Nunjucks/Handlebars) or ensure context-aware encoding on all outputs",
+        "Integrate trusted sanitization libraries (e.g., DOMPurify) for any user-generated HTML",
+        "Deploy helmet in Express and configure CSP with nonces; enable HSTS, X-Content-Type-Options, Referrer-Policy, and frame-ancestors",
+        "Add secure coding standards and code review checklists that explicitly ban dangerous patterns (eval, string-built SQL, unsanitized output)"
+      ],
+      "verification_methods": [
+        "Code review against secure coding checklist focusing on SQL construction and output encoding",
+        "SAST rules to detect string concatenation in SQL and unencoded output sinks; verify zero high findings prior to release",
+        "DAST scans (OWASP ZAP) showing no exploitable injection or XSS",
+        "Automated header compliance checks confirming CSP, HSTS, and other headers are present and correct",
+        "Unit/integration tests covering validation and encoding paths"
+      ]
+    },
+    {
+      "control_id": "A.8.29",
+      "domain": "Technological Controls",
+      "title": "Security Testing in Development and Acceptance (CI/CD Gates)",
+      "severity": "HIGH",
+      "policy_text": "Security testing shall be integrated into the development and acceptance lifecycle with automated gates. SAST, SCA, and DAST must run on pull requests and pre-release builds. Builds must fail on unresolved HIGH or above findings unless a formally approved risk acceptance is recorded. Identified findings must be triaged, tracked, remediated, and re-tested within defined SLAs. Test data must be sanitized and non-production credentials must be used during testing. Security testing results and attestations must be retained as release evidence.",
+      "vulnerabilities": [
+        "Semgrep (SAST): SQL Injection vulnerability in routes/search.js line 45",
+        "Semgrep (SAST): XSS vulnerability in routes/profile.js line 23",
+        "npm audit (SCA): Vulnerable express package (HIGH)",
+        "npm audit (SCA): Vulnerable jsonwebtoken package (HIGH)",
+        "OWASP ZAP (DAST): SQL Injection may be possible",
+        "OWASP ZAP (DAST): Cross-Site Scripting is possible"
+      ],
+      "implementation_requirements": [
+        "Integrate Semgrep SAST, npm audit/Snyk SCA, and OWASP ZAP DAST into CI/CD with mandatory quality gates",
+        "Define remediation SLAs (e.g., HIGH within 14 days; CRITICAL within 48 hours) and an exception process requiring risk sign-off",
+        "Automate ticket creation for vulnerabilities and track to closure",
+        "Use sanitized test datasets and secrets managers for non-production credentials",
+        "Store scan artifacts and release attestations in an immutable registry",
+        "Schedule periodic manual penetration testing for high-risk releases"
+      ],
+      "verification_methods": [
+        "Review CI/CD pipeline configurations and evidence of failing builds on HIGH findings",
+        "Audit scan reports and vulnerability tracker to confirm remediation within SLA",
+        "Spot-check release bundles for included security attestation artifacts",
+        "Review exception approvals and risk acceptance documentation",
+        "Compare DAST baseline and post-fix rescans for closure evidence"
+      ]
+    },
+    {
+      "control_id": "A.8.8",
+      "domain": "Technological Controls",
+      "title": "Management of Technical Vulnerabilities and Third-Party Components",
+      "severity": "HIGH",
+      "policy_text": "The organization shall operate a process to identify, assess, and remediate technical vulnerabilities in platforms and third-party components. Software Bills of Materials (SBOMs) must be maintained and kept current. Vulnerability intelligence must be continuously monitored. Vulnerable or end-of-life packages are prohibited in production. Dependency versions must be pinned and lockfiles committed. Patching must follow severity-based SLAs; emergency updates must be fast-tracked. Exceptions require documented risk acceptance, compensating controls, and time-bound remediation plans.",
+      "vulnerabilities": [
+        "npm audit (SCA): Vulnerable express package (HIGH)",
+        "npm audit (SCA): Vulnerable jsonwebtoken package (HIGH)"
+      ],
+      "implementation_requirements": [
+        "Generate and maintain SBOMs (CycloneDX/Syft) per build and store alongside artifacts",
+        "Enable automated dependency updates (Dependabot/Renovate) and enforce lockfiles in version control",
+        "Subscribe to and ingest CVE/NVD/vendor advisories; correlate against SBOM",
+        "Define patch SLAs and emergency patch workflow; standardize change records for dependency updates",
+        "Block builds that introduce dependencies with known HIGH/CRITICAL CVEs",
+        "Decommission or replace unsupported libraries and frameworks"
+      ],
+      "verification_methods": [
+        "Review SCA reports and SBOM inventories for alignment with deployed versions",
+        "Audit change tickets for dependency updates and SLA adherence",
+        "Check CI policy enforcing blocked builds on HIGH/CRITICAL CVEs",
+        "Sample verification that vulnerable packages (e.g., express, jsonwebtoken) are upgraded to patched versions"
+      ]
+    },
+    {
+      "control_id": "A.8.5",
+      "domain": "Technological Controls",
+      "title": "Secure Authentication and JWT Hardening",
+      "severity": "HIGH",
+      "policy_text": "Authentication mechanisms using JWTs must be securely designed and implemented. Only strong signing algorithms (e.g., RS256/ES256) may be used and must be explicitly whitelisted; the 'none' algorithm is forbidden. All tokens must be validated for signature and claims (iss, aud, exp, nbf) with short expiries and clock-skew handling. Keys must be generated, stored, and rotated using approved key management; verification keys must be obtained from a trusted JWKS endpoint. Tokens must be stored securely (HttpOnly and Secure cookies with SameSite or secured Authorization headers) and never in localStorage. Implement token revocation and refresh token rotation. Dependencies that implement authentication (e.g., jsonwebtoken) must be kept patched.",
+      "vulnerabilities": [
+        "npm audit (SCA): Vulnerable jsonwebtoken package (HIGH)"
+      ],
+      "implementation_requirements": [
+        "Upgrade jsonwebtoken to a non-vulnerable version or migrate to a vetted library (e.g., node-jose/jose)",
+        "Implement centralized auth middleware that enforces algorithm allow-lists and claim validation",
+        "Manage signing keys via KMS/HSM or secrets manager; publish verification keys via JWKS",
+        "Use HttpOnly, Secure, SameSite cookies for session tokens or secure Authorization headers with CSRF defenses",
+        "Build token revocation, rotation, and audience/issuer checks into the auth flow",
+        "Add unit/integration tests for invalid algorithm, expired tokens, and claim tampering"
+      ],
+      "verification_methods": [
+        "Code review for algorithm whitelisting, claim checks, and absence of localStorage for tokens",
+        "Automated tests demonstrating rejection of unsigned/none-alg and tampered tokens",
+        "Library/version inventory showing patched jsonwebtoken",
+        "Penetration testing of authentication flows (token fixation, replay, revocation)"
+      ]
+    },
+    {
+      "control_id": "A.8.20",
+      "domain": "Technological Controls",
+      "title": "Network Controls: Web Application Firewall and Edge Protections",
+      "severity": "HIGH",
+      "policy_text": "A Web Application Firewall (WAF) must protect public web applications with managed rules for SQL injection, XSS, and common web exploits. Virtual patching must be used to mitigate discovered vulnerabilities until code fixes are deployed. TLS 1.2+ is mandatory with HSTS; HTTP must redirect to HTTPS. Request size, rate limits, and IP reputation controls must be enforced to reduce attack surface. WAF and CDN logs must be centrally collected and monitored for anomalies and blocked attacks.",
+      "vulnerabilities": [
+        "OWASP ZAP (DAST): SQL Injection may be possible",
+        "OWASP ZAP (DAST): Cross-Site Scripting is possible"
+      ],
+      "implementation_requirements": [
+        "Deploy a managed WAF (e.g., Cloudflare/AWS WAF/Azure WAF) in front of the application and enable core rule sets for SQLi/XSS",
+        "Configure virtual patches for known findings while code remediation is in progress",
+        "Enforce TLS 1.2+ with HSTS and redirect HTTP to HTTPS",
+        "Implement rate limiting and request size limits at the edge/API gateway",
+        "Forward WAF/CDN logs to SIEM and tune detection/alerting"
+      ],
+      "verification_methods": [
+        "Review WAF configuration and rule sets; confirm SQLi/XSS protections are enabled",
+        "Analyze WAF logs for blocked attack traffic correlated with DAST test timestamps",
+        "Re-run DAST after WAF deployment to validate reduced exploitability",
+        "TLS configuration scan verifying protocol/cipher compliance and HSTS"
+      ]
+    }
+  ],
+  "metadata": {
+    "model": "openai/gpt-5",
+    "total_policies": 5,
+    "generated_at": "2025-11-13T16:06:41.957300Z"
+  }
+}

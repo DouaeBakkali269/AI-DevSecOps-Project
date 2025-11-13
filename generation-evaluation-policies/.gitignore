@@ -1,0 +1,34 @@
+# Progress files
+*_progress.json
+generation_progress.json
+generation_summary.json
+
+# Result files
+*_results.json
+
+# Charts
+*_scores_chart.png
+*_chart.png
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment files
+.env
+.env.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+

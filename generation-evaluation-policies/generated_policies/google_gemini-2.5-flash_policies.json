@@ -1,0 +1,81 @@
+{
+  "standard": "ISO/IEC 27001:2022",
+  "policies": [
+    {
+      "control_id": "A.8.26",
+      "domain": "Technological controls",
+      "title": "Application Security Requirements and Secure Development",
+      "severity": "HIGH",
+      "policy_text": "The organization shall establish and implement security requirements for applications throughout their entire lifecycle, from design to deployment and maintenance. This includes defining secure coding standards, conducting regular static and dynamic application security testing (SAST/DAST), and ensuring all input is properly validated and output is encoded to prevent injection and cross-site scripting attacks. All development teams must be trained in secure coding practices.",
+      "vulnerabilities": [
+        "Semgrep: SQL Injection (routes/search.js, line 45)",
+        "Semgrep: XSS (routes/profile.js, line 23)",
+        "OWASP ZAP: SQL Injection",
+        "OWASP ZAP: Cross-Site Scripting"
+      ],
+      "implementation_requirements": [
+        "Integrate SAST tools (e.g., Semgrep) into the CI/CD pipeline for automated code analysis.",
+        "Implement DAST tools (e.g., OWASP ZAP) for regular scanning of deployed applications.",
+        "Enforce secure coding guidelines and conduct mandatory developer training on common web vulnerabilities (e.g., OWASP Top 10).",
+        "Implement robust input validation and output encoding mechanisms in all application components.",
+        "Conduct regular security architecture reviews for all new and significant changes to applications."
+      ],
+      "verification_methods": [
+        "Review SAST and DAST scan reports to confirm vulnerability identification and remediation.",
+        "Audit CI/CD pipeline configurations to ensure security testing steps are integrated and enforced.",
+        "Review developer training records and secure coding guideline adherence.",
+        "Perform manual code reviews focusing on input validation and output encoding."
+      ]
+    },
+    {
+      "control_id": "A.8.8",
+      "domain": "Technological controls",
+      "title": "Management of Technical Vulnerabilities in Software Components",
+      "severity": "HIGH",
+      "policy_text": "The organization shall establish and maintain a process for identifying, assessing, and remediating technical vulnerabilities within all software components, including third-party libraries and dependencies. This process must include regular software composition analysis (SCA) to detect known vulnerabilities and ensure timely updates or patching to mitigate risks.",
+      "vulnerabilities": [
+        "npm audit: Vulnerable: express",
+        "npm audit: Vulnerable: jsonwebtoken"
+      ],
+      "implementation_requirements": [
+        "Implement an SCA tool (e.g., npm audit, Snyk, Dependabot) to continuously monitor dependencies for known vulnerabilities.",
+        "Establish a clear process for reviewing SCA scan results, prioritizing vulnerabilities, and assigning remediation tasks.",
+        "Define service level agreements (SLAs) for patching or updating vulnerable dependencies based on severity.",
+        "Maintain an inventory of all software dependencies, including their versions and known vulnerabilities."
+      ],
+      "verification_methods": [
+        "Review SCA tool reports and dashboards to track vulnerability status and remediation progress.",
+        "Audit dependency lists and confirm that critical vulnerabilities are addressed within defined SLAs.",
+        "Perform periodic manual review of project dependencies to ensure all are accounted for and scanned."
+      ]
+    },
+    {
+      "control_id": "A.5.21",
+      "domain": "Organisational controls",
+      "title": "Managing Information Security in the ICT Supply Chain",
+      "severity": "HIGH",
+      "policy_text": "The organization shall manage information security risks associated with the ICT supply chain, including the security of software components and services acquired from third parties. This includes conducting security assessments of third-party components, ensuring contractual agreements address security requirements, and monitoring the security posture of critical suppliers.",
+      "vulnerabilities": [
+        "npm audit: Vulnerable: express",
+        "npm audit: Vulnerable: jsonwebtoken"
+      ],
+      "implementation_requirements": [
+        "Establish a vendor security assessment process for all third-party software and service providers.",
+        "Include specific security clauses and requirements in all supplier agreements, particularly for software components.",
+        "Regularly review the security practices and vulnerability management processes of key suppliers.",
+        "Ensure that the organization's vulnerability management policy (A.8.8) extends to and is supported by supplier agreements."
+      ],
+      "verification_methods": [
+        "Review vendor security assessment documentation and reports.",
+        "Audit supplier contracts for the inclusion and enforcement of security clauses.",
+        "Request and review supplier security certifications or audit reports (e.g., SOC 2, ISO 27001).",
+        "Periodically reassess the security posture of critical ICT supply chain vendors."
+      ]
+    }
+  ],
+  "metadata": {
+    "model": "google/gemini-2.5-flash",
+    "total_policies": 3,
+    "generated_at": "2025-11-13T13:52:23.580076Z"
+  }
+}

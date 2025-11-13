@@ -1,0 +1,199 @@
+{
+  "standard": "ISO/IEC 27001:2022",
+  "policies": [
+    {
+      "control_id": "A.8.8",
+      "domain": "Technological Controls",
+      "title": "Management of Technical Vulnerabilities",
+      "severity": "HIGH",
+      "policy_text": "The organization shall establish a formal Technical Vulnerability Management process that:\n1. Continuously monitors authoritative vulnerability sources (e.g., NVD, vendor security advisories, CVE feeds) for all third‑party components used in production.\n2. Performs automated dependency scanning (SCA) on every code commit and on each build artefact.\n3. Classifies identified vulnerabilities by severity (CRITICAL, HIGH, MEDIUM, LOW) and by exposure (internal, external, internet‑facing).\n4. Prioritises remediation based on risk, business impact and exploitability; critical and high‑severity findings must be remediated within 14 days and 30 days respectively.\n5. Tracks remediation status in a centralized ticketing system and escalates overdue items to senior management.\n6. Validates that patched or upgraded components do not introduce regressions through regression testing before production deployment.\n7. Documents any accepted risk with a formal risk‑acceptance record signed by the Information Security Manager.\n8. Reviews the vulnerability management process at least annually for effectiveness and alignment with emerging threats.",
+      "vulnerabilities": [
+        {
+          "tool": "npm audit",
+          "type": "SCA",
+          "title": "Vulnerable: express",
+          "severity": "HIGH",
+          "package": "express"
+        },
+        {
+          "tool": "npm audit",
+          "type": "SCA",
+          "title": "Vulnerable: jsonwebtoken",
+          "severity": "HIGH",
+          "package": "jsonwebtoken"
+        }
+      ],
+      "implementation_requirements": [
+        "Subscribe to CVE/NVD feeds and vendor security mailing lists.",
+        "Integrate an SCA tool (e.g., npm audit, Snyk, OWASP Dependency‑Check) into the CI/CD pipeline to run on every pull request and nightly builds.",
+        "Define and document severity‑based remediation time‑frames (CRITICAL ≤ 7 days, HIGH ≤ 14 days, MEDIUM ≤ 30 days, LOW ≤ 60 days).",
+        "Configure a ticketing system (Jira, ServiceNow) to auto‑create remediation tickets from scan results.",
+        "Establish a risk‑acceptance workflow with documented justification and senior‑management approval.",
+        "Maintain an inventory of all third‑party libraries with version numbers and licensing information.",
+        "Perform regression testing after each library upgrade."
+      ],
+      "verification_methods": [
+        "Quarterly audit of SCA scan reports against remediation tickets.",
+        "Review of the vulnerability remediation dashboard for SLA compliance.",
+        "Sample testing of patched components in a staging environment.",
+        "Verification of risk‑acceptance records for any open high‑severity findings."
+      ]
+    },
+    {
+      "control_id": "A.8.25",
+      "domain": "Technological Controls",
+      "title": "Secure Development Lifecycle (SDL)",
+      "severity": "HIGH",
+      "policy_text": "The organization shall embed security into every phase of the software development lifecycle:\n1. **Requirements** – Security requirements (e.g., input validation, authentication, encryption) are captured in the project charter.\n2. **Design** – Threat modeling is performed for each new feature; design reviews verify that secure design patterns are applied.\n3. **Implementation** – Developers must follow the organisation’s secure coding standards. All source code is automatically analysed with a SAST tool (e.g., Semgrep) on each commit.\n4. **Verification** – Dynamic Application Security Testing (DAST) is executed on every build deployed to a test environment. Findings must be remediated before promotion to production.\n5. **Release** – A security sign‑off is required from the Information Security Officer before any release.\n6. **Maintenance** – Ongoing monitoring for newly discovered vulnerabilities in released code; patches are applied according to the Technical Vulnerability Management process.\n7. **Metrics** – Track the number of security defects detected per phase and the mean time to remediate.\n8. **Training** – All developers receive regular secure‑coding training and are required to pass a competency assessment annually.",
+      "vulnerabilities": [
+        {
+          "tool": "Semgrep",
+          "type": "SAST",
+          "title": "SQL Injection",
+          "severity": "HIGH",
+          "file": "routes/search.js",
+          "line": 45
+        },
+        {
+          "tool": "Semgrep",
+          "type": "SAST",
+          "title": "XSS",
+          "severity": "HIGH",
+          "file": "routes/profile.js",
+          "line": 23
+        },
+        {
+          "tool": "OWASP ZAP",
+          "type": "DAST",
+          "title": "SQL Injection",
+          "severity": "HIGH",
+          "description": "SQL injection may be possible"
+        },
+        {
+          "tool": "OWASP ZAP",
+          "type": "DAST",
+          "title": "Cross‑Site Scripting",
+          "severity": "HIGH",
+          "description": "XSS is possible"
+        }
+      ],
+      "implementation_requirements": [
+        "Define a Secure Development Lifecycle (SDL) framework and publish it on the internal wiki.",
+        "Integrate Semgrep (or equivalent SAST) into the pull‑request validation pipeline; block merges on high‑severity findings.",
+        "Integrate OWASP ZAP (or equivalent DAST) into the CI/CD pipeline for every staging deployment.",
+        "Establish a Threat Modeling workshop (e.g., STRIDE) for each new feature.",
+        "Create a security sign‑off checklist that must be completed before production release.",
+        "Provide secure‑coding training (e.g., OWASP Top 10) to all developers and assess competency annually.",
+        "Maintain a dashboard of SDL metrics (defects per phase, MTTR)."
+      ],
+      "verification_methods": [
+        "Review of SDL process documentation and training records.",
+        "Audit of CI/CD pipeline configurations for enforced SAST/DAST gates.",
+        "Sampling of threat‑model artefacts for completeness.",
+        "Inspection of security sign‑off checklists for each release.",
+        "Metrics review during quarterly ISMS management review."
+      ]
+    },
+    {
+      "control_id": "A.5.17",
+      "domain": "Organizational Controls",
+      "title": "Authentication Information and Token Management",
+      "severity": "HIGH",
+      "policy_text": "The organization shall protect authentication credentials and tokens by:\n1. Enforcing strong password policies and multi‑factor authentication (MFA) for all privileged accounts.\n2. Using industry‑standard libraries for token generation (e.g., jsonwebtoken) with secure defaults: HS256/HRS256, adequate key length, and short expiration times.\n3. Storing signing keys and secrets in a centrally‑managed secrets vault (e.g., HashiCorp Vault, AWS Secrets Manager) – never in source code or configuration files.\n4. Rotating signing keys at least every 90 days and revoking compromised tokens immediately.\n5. Validating token signatures on every request and rejecting tokens with missing or malformed claims.\n6. Logging authentication events (successful, failed, token refresh) in a tamper‑evident audit log.\n7. Conducting regular token‑related security testing (e.g., token‑tampering, replay attacks) as part of the SDL.\n8. Documenting the authentication flow and maintaining an up‑to‑date diagram reviewed annually.",
+      "vulnerabilities": [
+        {
+          "tool": "npm audit",
+          "type": "SCA",
+          "title": "Vulnerable: jsonwebtoken",
+          "severity": "HIGH",
+          "package": "jsonwebtoken"
+        },
+        {
+          "tool": "Semgrep",
+          "type": "SAST",
+          "title": "XSS",
+          "severity": "HIGH",
+          "file": "routes/profile.js",
+          "line": 23,
+          "note": "Potential misuse of unsanitised user input in token payloads"
+        }
+      ],
+      "implementation_requirements": [
+        "Adopt a secrets‑management solution and migrate all JWT signing keys and other credentials to it.",
+        "Update application code to retrieve keys at runtime via the secrets‑management API.",
+        "Configure JWT libraries to use RS256 (asymmetric) keys with a minimum 2048‑bit modulus.",
+        "Set token expiration (e.g., 15 minutes) and implement refresh‑token flow with revocation list.",
+        "Enable MFA for all admin and service‑account logins.",
+        "Implement centralized logging of authentication events (e.g., SIEM).",
+        "Schedule quarterly token‑security reviews and penetration testing of authentication endpoints."
+      ],
+      "verification_methods": [
+        "Review of secrets‑management inventory and access controls.",
+        "Static code analysis to confirm no hard‑coded secrets or keys.",
+        "Inspection of JWT configuration (algorithm, key length, expiry) in code reviews.",
+        "Log audit of authentication events for completeness and integrity.",
+        "Penetration test reports confirming resistance to token‑tampering attacks."
+      ]
+    },
+    {
+      "control_id": "A.8.23",
+      "domain": "Technological Controls",
+      "title": "Web Application Protection – Input Validation, Output Encoding & WAF",
+      "severity": "MEDIUM",
+      "policy_text": "The organization shall protect web applications from injection‑based attacks by:\n1. Implementing a centralised Web Application Firewall (WAF) in front of all public‑facing services with rule sets that detect and block SQLi and XSS attempts.\n2. Enforcing strict input validation on server‑side components – whitelist‑based validation for all query parameters, headers, and request bodies.\n3. Applying context‑aware output encoding (e.g., OWASP ESAPI) before rendering any user‑supplied data in HTML, JavaScript, or SQL statements.\n4. Deploying security response headers (Content‑Security‑Policy, X‑Content‑Type‑Options, X‑Frame‑Options, Referrer‑Policy) on all responses.\n5. Rate‑limiting sensitive endpoints (search, login) to mitigate automated injection attempts.\n6. Conducting periodic DAST scans and WAF rule‑tuning after each release.\n7. Maintaining an incident‑response playbook for detected injection attempts, including automated alerting to the SOC.",
+      "vulnerabilities": [
+        {
+          "tool": "Semgrep",
+          "type": "SAST",
+          "title": "SQL Injection",
+          "severity": "HIGH",
+          "file": "routes/search.js",
+          "line": 45
+        },
+        {
+          "tool": "Semgrep",
+          "type": "SAST",
+          "title": "XSS",
+          "severity": "HIGH",
+          "file": "routes/profile.js",
+          "line": 23
+        },
+        {
+          "tool": "OWASP ZAP",
+          "type": "DAST",
+          "title": "SQL Injection",
+          "severity": "HIGH",
+          "description": "SQL injection may be possible"
+        },
+        {
+          "tool": "OWASP ZAP",
+          "type": "DAST",
+          "title": "Cross‑Site Scripting",
+          "severity": "HIGH",
+          "description": "XSS is possible"
+        }
+      ],
+      "implementation_requirements": [
+        "Deploy a WAF (e.g., ModSecurity, Cloud‑based WAF) with OWASP CRS enabled.",
+        "Define a secure coding checklist that includes input validation and output encoding requirements.",
+        "Integrate security header middleware (helmet.js) into the Express application stack.",
+        "Configure rate‑limiting middleware (express-rate-limit) for high‑risk endpoints.",
+        "Schedule monthly OWASP ZAP scans of the staging environment and remediate findings before production.",
+        "Establish automated alerts from the WAF to the SIEM when attacks are blocked.",
+        "Document and test the injection‑incident response playbook annually."
+      ],
+      "verification_methods": [
+        "Review of WAF configuration and rule‑set version.",
+        "Audit of code repositories for presence of input‑validation and output‑encoding functions.",
+        "Scanning reports from OWASP ZAP showing no high‑severity findings after remediation.",
+        "Log review of WAF alerts and SIEM correlation.",
+        "Penetration test verification of successful blocking of injection payloads."
+      ]
+    }
+  ],
+  "metadata": {
+    "model": "openai/gpt-oss-120b",
+    "total_policies": 4,
+    "generated_at": "2025-11-13T16:09:40.683186Z"
+  }
+}
