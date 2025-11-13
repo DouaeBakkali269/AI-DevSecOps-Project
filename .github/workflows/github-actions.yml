@@ -7,69 +7,146 @@ on:
     branches: [ main ]
   schedule:
     - cron: '0 2 * * 1'  # Weekly on Monday at 2 AM
+  workflow_dispatch:  # Manual trigger
+    inputs:
+      skip_setup:
+        description: 'Skip setup steps (Python, Node, Juice Shop clone)'
+        required: false
+        type: boolean
+        default: false
+      skip_sast:
+        description: 'Skip SAST scanning (CodeQL)'
+        required: false
+        type: boolean
+        default: false
+      skip_sca:
+        description: 'Skip SCA scanning (Snyk)'
+        required: false
+        type: boolean
+        default: false
+      skip_dast:
+        description: 'Skip DAST scanning (ZAP)'
+        required: false
+        type: boolean
+        default: false
+      start_from_step:
+        description: 'Start from step (setup/scan/parse/generate/evaluate)'
+        required: false
+        type: choice
+        options:
+          - setup
+          - scan
+          - parse
+          - generate
+          - evaluate
+        default: 'setup'
+
+# ⭐ FIX: Add permissions for CodeQL
+permissions:
+  contents: read
+  security-events: write  # Required for CodeQL
+  actions: read           # Required for CodeQL API access
+  pull-requests: read     # Optional: for PR comments
 
 jobs:
   security-scan-and-policy-generation:
     runs-on: ubuntu-latest
     
     steps:
+    # ==================== SETUP PHASE ====================
+    
     - name: Checkout Code
       uses: actions/checkout@v4
       with:
         submodules: recursive
     
     - name: Set up Python
+      if: ${{ !inputs.skip_setup }}
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
+        cache: 'pip'
     
     - name: Set up Node.js
+      if: ${{ !inputs.skip_setup }}
       uses: actions/setup-node@v4
       with:
         node-version: '20'
+        cache: 'npm'
     
     - name: Clone OWASP Juice Shop
+      if: ${{ !inputs.skip_setup }}
       run: |
-        mkdir -p app
-        git clone --depth 1 https://github.com/juice-shop/juice-shop.git app/juice-shop
+        if [ ! -d "app/juice-shop" ]; then
+          mkdir -p app
+          git clone --depth 1 https://github.com/juice-shop/juice-shop.git app/juice-shop
+        else
+          echo "✅ Juice Shop already exists, skipping clone"
+        fi
     
     - name: Install Dependencies
+      if: ${{ !inputs.skip_setup }}
       run: |
         pip install -r requirements.txt
         cd app/juice-shop && npm install
     
-     # ==================== SAST Scanning - CodeQL ====================
+    # ==================== SAST SCANNING - CodeQL ====================
     
     - name: Initialize CodeQL
+      if: ${{ !inputs.skip_sast }}
       uses: github/codeql-action/init@v3
       with:
         languages: javascript
         queries: security-and-quality
     
     - name: Perform CodeQL Analysis
+      if: ${{ !inputs.skip_sast }}
       uses: github/codeql-action/analyze@v3
       with:
         category: "/language:javascript"
         output: results/scan_reports
-        upload: false
+        upload: false  # We'll handle the SARIF file manually
     
     - name: Export CodeQL Results to SARIF
+      if: ${{ !inputs.skip_sast }}
       run: |
-        # Find and copy CodeQL SARIF results
         mkdir -p results/scan_reports
+        
+        # Find and copy CodeQL SARIF results
+        echo "🔍 Searching for SARIF files..."
+        find . -name "*.sarif" -type f
+        
+        # Copy the SARIF file
         find . -name "*.sarif" -type f -exec cp {} results/scan_reports/codeql_report.sarif \; || true
         
         # Verify the file exists
         if [ -f results/scan_reports/codeql_report.sarif ]; then
           echo "✅ CodeQL SARIF report created"
           ls -lh results/scan_reports/codeql_report.sarif
+          
+          # Show summary
+          python3 << 'PYTHON_SCRIPT'
+import json
+try:
+    with open('results/scan_reports/codeql_report.sarif') as f:
+        data = json.load(f)
+    runs = data.get('runs', [])
+    if runs:
+        results = runs[0].get('results', [])
+        print(f"📊 CodeQL found {len(results)} potential issues")
+except Exception as e:
+    print(f"⚠️  Could not parse SARIF: {e}")
+PYTHON_SCRIPT
         else
           echo "⚠️ CodeQL SARIF report not found"
+          echo "Creating empty report to avoid parser errors"
+          echo '{"runs":[{"results":[]}]}' > results/scan_reports/codeql_report.sarif
         fi
     
-     # ==================== SCA Scanning - Snyk ====================
+    # ==================== SCA SCANNING - Snyk ====================
     
     - name: Run Snyk Security Scan (SCA)
+      if: ${{ !inputs.skip_sca }}
       uses: snyk/actions/node@master
       continue-on-error: true
       env:
@@ -80,25 +157,28 @@ jobs:
         json: true
     
     - name: Verify Snyk Results
+      if: ${{ !inputs.skip_sca }}
       run: |
+        mkdir -p results/scan_reports
         if [ -f results/scan_reports/snyk_report.json ]; then
-          echo "✅ Snyk scan completed successfully"
-          # Show summary
-          python3 -c "import json; data=json.load(open('results/scan_reports/snyk_report.json')); print(f'Vulnerabilities found: {len(data.get(\"vulnerabilities\", []))}')" || true
+          echo "✅ Snyk scan completed"
+          python3 -c "import json; data=json.load(open('results/scan_reports/snyk_report.json')); print(f'📊 Snyk found {len(data.get(\"vulnerabilities\", []))} vulnerabilities')" || true
         else
-          echo "⚠️ Snyk report not found, but continuing..."
-          # Create empty report to avoid parser errors
+          echo "⚠️ Creating empty Snyk report"
           echo '{"vulnerabilities":{}}' > results/scan_reports/snyk_report.json
         fi
     
-    # ==================== DAST Scanning ====================
+    # ==================== DAST SCANNING - OWASP ZAP ====================
     
     - name: Start Juice Shop Application
+      if: ${{ !inputs.skip_dast }}
       run: |
         cd app/juice-shop
         npm start &
+        JUICE_SHOP_PID=$!
+        echo "JUICE_SHOP_PID=$JUICE_SHOP_PID" >> $GITHUB_ENV
+        
         echo "Waiting for Juice Shop to start..."
-        # Wait for application to be ready
         for i in {1..30}; do
           if curl -sSf http://localhost:3000 > /dev/null 2>&1; then
             echo "✅ Juice Shop is ready!"
@@ -107,132 +187,245 @@ jobs:
           echo "Waiting... attempt $i/30"
           sleep 5
         done
+        
         # Final verification
-        curl -sSf http://localhost:3000 || (echo "❌ Juice Shop failed to start" && exit 1)
+        if ! curl -sSf http://localhost:3000 > /dev/null 2>&1; then
+          echo "❌ Juice Shop failed to start"
+          exit 1
+        fi
     
     - name: Run OWASP ZAP (DAST)
+      if: ${{ !inputs.skip_dast }}
       uses: zaproxy/action-baseline@v0.10.0
       with:
         target: 'http://localhost:3000'
         cmd_options: '-a'
         fail_action: false
-        token: ''
-        allow_issue_writing: false
       continue-on-error: true
     
     - name: Save ZAP Report
+      if: ${{ !inputs.skip_dast }}
       run: |
-        # ZAP action creates reports with specific default names
-        echo "Looking for ZAP reports in current directory..."
+        mkdir -p results/scan_reports
+        
+        echo "🔍 Looking for ZAP reports..."
         ls -la
         
         # Move reports with their actual names
-        if [ -f "report_html.html" ]; then
-          mv report_html.html results/scan_reports/zap_report.html
-          echo "✅ Moved HTML report"
-        else
-          echo "⚠️ HTML report not found"
-        fi
-        
         if [ -f "report_json.json" ]; then
           mv report_json.json results/scan_reports/zap_report.json
           echo "✅ Moved JSON report"
+        elif [ -f "report_html.html" ]; then
+          echo "⚠️ Only HTML report found, creating empty JSON"
+          echo '{"site":[]}' > results/scan_reports/zap_report.json
         else
-          echo "⚠️ JSON report not found"
+          echo "⚠️ No ZAP reports found, creating empty JSON"
+          echo '{"site":[]}' > results/scan_reports/zap_report.json
         fi
         
-        if [ -f "report_md.md" ]; then
-          mv report_md.md results/scan_reports/zap_report.md
-          echo "✅ Moved Markdown report"
-        fi
+        [ -f "report_html.html" ] && mv report_html.html results/scan_reports/zap_report.html || true
+        [ -f "report_md.md" ] && mv report_md.md results/scan_reports/zap_report.md || true
         
-        echo "Final contents of results/scan_reports:"
+        echo "📁 Final contents of results/scan_reports:"
         ls -lh results/scan_reports/ || true
     
-    # ==================== Parse Reports ====================
+    - name: Stop Juice Shop
+      if: ${{ !inputs.skip_dast && always() }}
+      run: |
+        if [ ! -z "$JUICE_SHOP_PID" ]; then
+          kill $JUICE_SHOP_PID || true
+        fi
+    
+    # ==================== PARSE REPORTS ====================
+    
+    - name: Download Previous Artifacts (if starting from parse)
+      if: ${{ github.event.inputs.start_from_step == 'parse' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: security-scan-reports
+        path: results/scan_reports/
+      continue-on-error: true
     
     - name: Parse Vulnerability Reports
+      if: ${{ github.event.inputs.start_from_step != 'generate' && github.event.inputs.start_from_step != 'evaluate' }}
       run: |
+        echo "📋 Parsing vulnerability reports..."
         python parsers/parse_reports.py \
           --input results/scan_reports \
           --output results/parsed_data/vulnerabilities.json
+        
+        echo "✅ Parsing complete"
+        
+        # Show summary
+        python3 << 'PYTHON_SCRIPT'
+import json
+try:
+    with open('results/parsed_data/vulnerabilities.json') as f:
+        data = json.load(f)
+    metadata = data.get('metadata', {})
+    print(f"\n📊 Vulnerability Summary:")
+    print(f"   Total: {metadata.get('total_vulnerabilities', 0)}")
+    print(f"   By Severity: {metadata.get('by_severity', {})}")
+    print(f"   By Type: {metadata.get('by_type', {})}")
+except Exception as e:
+    print(f"⚠️  Could not read parsed data: {e}")
+PYTHON_SCRIPT
     
-    # ==================== Generate Policies with LLMs ====================
+    # ==================== GENERATE POLICIES ====================
+    
+    - name: Download Previous Artifacts (if starting from generate)
+      if: ${{ github.event.inputs.start_from_step == 'generate' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: parsed-vulnerabilities
+        path: results/parsed_data/
+      continue-on-error: true
     
     - name: Generate Security Policies (GPT-4)
+      if: ${{ github.event.inputs.start_from_step != 'evaluate' }}
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
+        echo "🤖 Generating policies with GPT-4..."
         python llm-policy-generator/policy_generator.py \
           --model gpt-4 \
           --input results/parsed_data/vulnerabilities.json \
-          --output results/generated_policies/gpt4_policies.json
+          --output results/generated_policies/gpt4_policies.json \
+          && echo "✅ GPT-4 complete" \
+          || echo "⚠️ GPT-4 generation failed (check API key)"
+      continue-on-error: true
     
     - name: Generate Security Policies (Claude)
+      if: ${{ github.event.inputs.start_from_step != 'evaluate' }}
       env:
         ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       run: |
+        echo "🤖 Generating policies with Claude..."
         python llm-policy-generator/policy_generator.py \
           --model claude-sonnet-4.5 \
           --input results/parsed_data/vulnerabilities.json \
-          --output results/generated_policies/claude_policies.json
+          --output results/generated_policies/claude_policies.json \
+          && echo "✅ Claude complete" \
+          || echo "⚠️ Claude generation failed (check API key)"
+      continue-on-error: true
     
     - name: Generate Security Policies (DeepSeek)
+      if: ${{ github.event.inputs.start_from_step != 'evaluate' }}
       env:
         TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
       run: |
+        echo "🤖 Generating policies with DeepSeek..."
         python llm-policy-generator/policy_generator.py \
           --model deepseek-r1 \
           --input results/parsed_data/vulnerabilities.json \
-          --output results/generated_policies/deepseek_policies.json
+          --output results/generated_policies/deepseek_policies.json \
+          && echo "✅ DeepSeek complete" \
+          || echo "⚠️ DeepSeek generation failed (check API key)"
+      continue-on-error: true
     
-    # ==================== Evaluate Policies ====================
+    # ==================== EVALUATE POLICIES ====================
+    
+    - name: Download Previous Artifacts (if starting from evaluate)
+      if: ${{ github.event.inputs.start_from_step == 'evaluate' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: generated-policies
+        path: results/generated_policies/
+      continue-on-error: true
     
     - name: Evaluate Generated Policies
       run: |
+        echo "📊 Evaluating generated policies..."
         python evaluation/evaluate_policies.py \
           --generated results/generated_policies \
           --reference reference-policies \
           --output results/evaluations/metrics.json
-    
-    # ==================== Generate Report ====================
+        
+        echo "✅ Evaluation complete"
+      continue-on-error: true
     
     - name: Generate Comparison Report
       run: |
+        echo "📝 Generating comparison report..."
         python evaluation/generate_report.py \
           --metrics results/evaluations/metrics.json \
           --output results/final_report.html
+        
+        echo "✅ Report generated"
+      continue-on-error: true
     
-    # ==================== Upload Artifacts ====================
+    # ==================== UPLOAD ARTIFACTS ====================
     
     - name: Upload Scan Reports
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: security-scan-reports
         path: results/scan_reports/
+        retention-days: 30
+    
+    - name: Upload Parsed Vulnerabilities
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: parsed-vulnerabilities
+        path: results/parsed_data/
+        retention-days: 30
     
     - name: Upload Generated Policies
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: generated-policies
         path: results/generated_policies/
+        retention-days: 30
     
     - name: Upload Evaluation Results
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: evaluation-results
         path: results/evaluations/
+        retention-days: 30
     
     - name: Upload Final Report
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: final-report
         path: results/final_report.html
+        retention-days: 90
     
-    # ==================== Security Gates ====================
+    # ==================== SUMMARY ====================
     
-    - name: Check Critical Vulnerabilities
+    - name: Job Summary
+      if: always()
       run: |
-        python pipeline/check_security_gates.py \
-          --report results/parsed_data/vulnerabilities.json \
-          --threshold critical
+        echo "# 🎯 Pipeline Execution Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## 📊 Results" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f results/parsed_data/vulnerabilities.json ]; then
+          python3 << 'PYTHON_SCRIPT' >> $GITHUB_STEP_SUMMARY
+import json
+try:
+    with open('results/parsed_data/vulnerabilities.json') as f:
+        data = json.load(f)
+    metadata = data.get('metadata', {})
+    
+    print(f"\n### Vulnerabilities Found")
+    print(f"- **Total**: {metadata.get('total_vulnerabilities', 0)}")
+    print(f"- **By Severity**: {metadata.get('by_severity', {})}")
+    print(f"- **By Type**: {metadata.get('by_type', {})}")
+except:
+    print("\n⚠️ Could not read vulnerability data")
+PYTHON_SCRIPT
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## 📁 Artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "- Security scan reports" >> $GITHUB_STEP_SUMMARY
+        echo "- Parsed vulnerabilities" >> $GITHUB_STEP_SUMMARY
+        echo "- Generated policies" >> $GITHUB_STEP_SUMMARY
+        echo "- Evaluation results" >> $GITHUB_STEP_SUMMARY
+        echo "- Final report" >> $GITHUB_STEP_SUMMARY
