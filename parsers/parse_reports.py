@@ -51,7 +51,9 @@ class VulnerabilityParser:
         
         for report_file in self.input_dir.glob("*"):
             try:
-                if "semgrep" in report_file.name:
+                if "codeql" in report_file.name and report_file.suffix == ".sarif":
+                    self._parse_codeql_sarif(report_file)
+                elif "semgrep" in report_file.name:
                     self._parse_semgrep(report_file)
                 elif "nodejsscan" in report_file.name:
                     self._parse_nodejsscan(report_file)
