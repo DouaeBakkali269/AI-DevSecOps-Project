@@ -27,6 +27,10 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
+    - name: Clone OWASP Juice Shop
+      run: |
+        mkdir -p app
+        git clone --depth 1 https://github.com/juice-shop/juice-shop.git app/juice-shop
     
     - name: Install Dependencies
       run: |
