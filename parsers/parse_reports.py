@@ -135,7 +135,100 @@ class VulnerabilityParser:
                 "recommendation": "Review security best practices"
             }
             self.vulnerabilities.append(vuln)
+    def _parse_codeql_sarif(self, file_path: Path):
+    """Parse CodeQL SARIF report"""
+    try:
+        with open(file_path, encoding='utf-8') as f:
+            data = json.load(f)
+        
+        for run in data.get("runs", []):
+            tool_name = run.get("tool", {}).get("driver", {}).get("name", "CodeQL")
             
+            for result in run.get("results", []):
+                # Extract location information
+                locations = result.get("locations", [])
+                if not locations:
+                    continue
+                
+                location = locations[0].get("physicalLocation", {})
+                artifact_location = location.get("artifactLocation", {})
+                region = location.get("region", {})
+                
+                # Extract rule information
+                rule_id = result.get("ruleId", "Unknown")
+                message = result.get("message", {}).get("text", "")
+                level = result.get("level", "warning")
+                
+                vuln = {
+                    "tool": "CodeQL",
+                    "type": "SAST",
+                    "title": rule_id,
+                    "severity": self._map_codeql_level(level),
+                    "description": message,
+                    "file": artifact_location.get("uri", ""),
+                    "line": region.get("startLine", 0),
+                    "code_snippet": region.get("snippet", {}).get("text", ""),
+                    "cwe": self._extract_cwe_from_codeql(result),
+                    "owasp": self._map_to_owasp(rule_id),
+                    "recommendation": self._get_codeql_recommendation(result)
+                }
+                self.vulnerabilities.append(vuln)
+                
+        logger.info(f"Parsed {len([v for v in self.vulnerabilities if v['tool'] == 'CodeQL'])} CodeQL findings")
+        
+    except Exception as e:
+        logger.error(f"Error parsing CodeQL SARIF: {e}")
+        import traceback
+        traceback.print_exc()
+
+def _map_codeql_level(self, level: str) -> str:
+    """Map CodeQL severity levels to standard levels"""
+    mapping = {
+        "error": "HIGH",
+        "warning": "MEDIUM",
+        "note": "LOW",
+        "none": "INFO"
+    }
+    return mapping.get(level.lower(), "MEDIUM")
+
+def _extract_cwe_from_codeql(self, result: dict) -> str:
+    """Extract CWE from CodeQL result"""
+    # Check properties for CWE tags
+    properties = result.get("properties", {})
+    tags = properties.get("tags", [])
+    
+    for tag in tags:
+        if "cwe" in tag.lower():
+            # Extract CWE number using regex
+            import re
+            match = re.search(r'cwe-?(\d+)', tag, re.IGNORECASE)
+            if match:
+                return f"CWE-{match.group(1)}"
+    
+    # Check in rule metadata
+    rule = result.get("rule", {})
+    if rule:
+        rule_properties = rule.get("properties", {})
+        rule_tags = rule_properties.get("tags", [])
+        for tag in rule_tags:
+            if "cwe" in tag.lower():
+                import re
+                match = re.search(r'cwe-?(\d+)', tag, re.IGNORECASE)
+                if match:
+                    return f"CWE-{match.group(1)}"
+    
+    return "CWE-Unknown"
+
+def _get_codeql_recommendation(self, result: dict) -> str:
+    """Get recommendation from CodeQL result"""
+    # Try to get help text
+    message = result.get("message", {})
+    help_text = message.get("markdown", message.get("text", ""))
+    
+    if help_text:
+        return f"Review and remediate: {help_text[:200]}"
+    
+    return "Review CodeQL findings and apply secure coding practices"       
     def _parse_npm_audit(self, file_path: Path):
         """Parse npm audit SCA report"""
         with open(file_path) as f:
