@@ -74,6 +74,101 @@ class VulnerabilityParser:
                 
         logger.info(f"Total vulnerabilities found: {len(self.vulnerabilities)}")
         
+    def _parse_codeql_sarif(self, file_path: Path):
+        """Parse CodeQL SARIF report"""
+        try:
+            with open(file_path, encoding='utf-8') as f:
+                data = json.load(f)
+            
+            for run in data.get("runs", []):
+                tool_name = run.get("tool", {}).get("driver", {}).get("name", "CodeQL")
+                
+                for result in run.get("results", []):
+                    # Extract location information
+                    locations = result.get("locations", [])
+                    if not locations:
+                        continue
+                    
+                    location = locations[0].get("physicalLocation", {})
+                    artifact_location = location.get("artifactLocation", {})
+                    region = location.get("region", {})
+                    
+                    # Extract rule information
+                    rule_id = result.get("ruleId", "Unknown")
+                    message = result.get("message", {}).get("text", "")
+                    level = result.get("level", "warning")
+                    
+                    vuln = {
+                        "tool": "CodeQL",
+                        "type": "SAST",
+                        "title": rule_id,
+                        "severity": self._map_codeql_level(level),
+                        "description": message,
+                        "file": artifact_location.get("uri", ""),
+                        "line": region.get("startLine", 0),
+                        "code_snippet": region.get("snippet", {}).get("text", ""),
+                        "cwe": self._extract_cwe_from_codeql(result),
+                        "owasp": self._map_to_owasp(rule_id),
+                        "recommendation": self._get_codeql_recommendation(result)
+                    }
+                    self.vulnerabilities.append(vuln)
+                    
+            logger.info(f"Parsed {len([v for v in self.vulnerabilities if v['tool'] == 'CodeQL'])} CodeQL findings")
+            
+        except Exception as e:
+            logger.error(f"Error parsing CodeQL SARIF: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def _map_codeql_level(self, level: str) -> str:
+        """Map CodeQL severity levels to standard levels"""
+        mapping = {
+            "error": "HIGH",
+            "warning": "MEDIUM",
+            "note": "LOW",
+            "none": "INFO"
+        }
+        return mapping.get(level.lower(), "MEDIUM")
+
+    def _extract_cwe_from_codeql(self, result: dict) -> str:
+        """Extract CWE from CodeQL result"""
+        # Check properties for CWE tags
+        properties = result.get("properties", {})
+        tags = properties.get("tags", [])
+        
+        for tag in tags:
+            if "cwe" in tag.lower():
+                # Extract CWE number using regex
+                import re
+                match = re.search(r'cwe-?(\d+)', tag, re.IGNORECASE)
+                if match:
+                    return f"CWE-{match.group(1)}"
+        
+        # Check in rule metadata
+        rule = result.get("rule", {})
+        if rule:
+            rule_properties = rule.get("properties", {})
+            rule_tags = rule_properties.get("tags", [])
+            for tag in rule_tags:
+                if "cwe" in tag.lower():
+                    import re
+                    match = re.search(r'cwe-?(\d+)', tag, re.IGNORECASE)
+                    if match:
+                        return f"CWE-{match.group(1)}"
+        
+        return "CWE-Unknown"
+
+    def _get_codeql_recommendation(self, result: dict) -> str:
+        """Get recommendation from CodeQL result"""
+        # Try to get help text
+        message = result.get("message", {})
+        help_text = message.get("markdown", message.get("text", ""))
+        
+        if help_text:
+            return f"Review and remediate: {help_text[:200]}"
+        
+        return "Review CodeQL findings and apply secure coding practices"
+        
     def _parse_semgrep(self, file_path: Path):
         """Parse Semgrep SAST report"""
         with open(file_path) as f:
@@ -137,100 +232,7 @@ class VulnerabilityParser:
                 "recommendation": "Review security best practices"
             }
             self.vulnerabilities.append(vuln)
-    def _parse_codeql_sarif(self, file_path: Path):
-    """Parse CodeQL SARIF report"""
-    try:
-        with open(file_path, encoding='utf-8') as f:
-            data = json.load(f)
-        
-        for run in data.get("runs", []):
-            tool_name = run.get("tool", {}).get("driver", {}).get("name", "CodeQL")
             
-            for result in run.get("results", []):
-                # Extract location information
-                locations = result.get("locations", [])
-                if not locations:
-                    continue
-                
-                location = locations[0].get("physicalLocation", {})
-                artifact_location = location.get("artifactLocation", {})
-                region = location.get("region", {})
-                
-                # Extract rule information
-                rule_id = result.get("ruleId", "Unknown")
-                message = result.get("message", {}).get("text", "")
-                level = result.get("level", "warning")
-                
-                vuln = {
-                    "tool": "CodeQL",
-                    "type": "SAST",
-                    "title": rule_id,
-                    "severity": self._map_codeql_level(level),
-                    "description": message,
-                    "file": artifact_location.get("uri", ""),
-                    "line": region.get("startLine", 0),
-                    "code_snippet": region.get("snippet", {}).get("text", ""),
-                    "cwe": self._extract_cwe_from_codeql(result),
-                    "owasp": self._map_to_owasp(rule_id),
-                    "recommendation": self._get_codeql_recommendation(result)
-                }
-                self.vulnerabilities.append(vuln)
-                
-        logger.info(f"Parsed {len([v for v in self.vulnerabilities if v['tool'] == 'CodeQL'])} CodeQL findings")
-        
-    except Exception as e:
-        logger.error(f"Error parsing CodeQL SARIF: {e}")
-        import traceback
-        traceback.print_exc()
-
-def _map_codeql_level(self, level: str) -> str:
-    """Map CodeQL severity levels to standard levels"""
-    mapping = {
-        "error": "HIGH",
-        "warning": "MEDIUM",
-        "note": "LOW",
-        "none": "INFO"
-    }
-    return mapping.get(level.lower(), "MEDIUM")
-
-def _extract_cwe_from_codeql(self, result: dict) -> str:
-    """Extract CWE from CodeQL result"""
-    # Check properties for CWE tags
-    properties = result.get("properties", {})
-    tags = properties.get("tags", [])
-    
-    for tag in tags:
-        if "cwe" in tag.lower():
-            # Extract CWE number using regex
-            import re
-            match = re.search(r'cwe-?(\d+)', tag, re.IGNORECASE)
-            if match:
-                return f"CWE-{match.group(1)}"
-    
-    # Check in rule metadata
-    rule = result.get("rule", {})
-    if rule:
-        rule_properties = rule.get("properties", {})
-        rule_tags = rule_properties.get("tags", [])
-        for tag in rule_tags:
-            if "cwe" in tag.lower():
-                import re
-                match = re.search(r'cwe-?(\d+)', tag, re.IGNORECASE)
-                if match:
-                    return f"CWE-{match.group(1)}"
-    
-    return "CWE-Unknown"
-
-def _get_codeql_recommendation(self, result: dict) -> str:
-    """Get recommendation from CodeQL result"""
-    # Try to get help text
-    message = result.get("message", {})
-    help_text = message.get("markdown", message.get("text", ""))
-    
-    if help_text:
-        return f"Review and remediate: {help_text[:200]}"
-    
-    return "Review CodeQL findings and apply secure coding practices"      
     def _parse_npm_audit(self, file_path: Path):
         """Parse npm audit SCA report"""
         with open(file_path) as f:
@@ -267,15 +269,14 @@ def _get_codeql_recommendation(self, result: dict) -> str:
                 "package": vuln.get("packageName", ""),
                 "version": vuln.get("version", ""),
                 "fixed_in": vuln.get("fixedIn", []),
-                "cve": vuln.get("identifiers", {}).get("CVE", []),
-                "cwe": vuln.get("identifiers", {}).get("CWE", []),
+                "cwe": vuln.get("identifiers", {}).get("CWE", [""])[0],
                 "owasp": "A06:2021 - Vulnerable Components",
-                "recommendation": f"Upgrade to {vuln.get('fixedIn', ['latest'])[0]}"
+                "recommendation": f"Upgrade to {', '.join(vuln.get('fixedIn', ['latest']))}"
             }
             self.vulnerabilities.append(vulnerability)
             
     def _parse_zap_json(self, file_path: Path):
-        """Parse OWASP ZAP DAST report (JSON)"""
+        """Parse OWASP ZAP JSON report"""
         with open(file_path) as f:
             data = json.load(f)
             
@@ -284,22 +285,20 @@ def _get_codeql_recommendation(self, result: dict) -> str:
                 vuln = {
                     "tool": "OWASP ZAP",
                     "type": "DAST",
-                    "title": alert.get("name", ""),
-                    "severity": self._normalize_zap_severity(alert.get("riskcode", "0")),
+                    "title": alert.get("name", "Unknown"),
+                    "severity": self._map_zap_risk(alert.get("riskcode", "0")),
                     "description": alert.get("desc", ""),
-                    "url": alert.get("url", ""),
-                    "method": alert.get("method", ""),
-                    "parameter": alert.get("param", ""),
-                    "attack": alert.get("attack", ""),
-                    "evidence": alert.get("evidence", ""),
-                    "cwe": f"CWE-{alert.get('cweid', '')}",
+                    "url": alert.get("instances", [{}])[0].get("uri", ""),
+                    "method": alert.get("instances", [{}])[0].get("method", ""),
+                    "param": alert.get("instances", [{}])[0].get("param", ""),
+                    "cwe": f"CWE-{alert.get('cweid', 'Unknown')}",
                     "owasp": self._map_to_owasp(alert.get("name", "")),
                     "recommendation": alert.get("solution", "")
                 }
                 self.vulnerabilities.append(vuln)
                 
     def _parse_zap_xml(self, file_path: Path):
-        """Parse OWASP ZAP DAST report (XML)"""
+        """Parse OWASP ZAP XML report"""
         tree = ET.parse(file_path)
         root = tree.getroot()
         
@@ -308,46 +307,58 @@ def _get_codeql_recommendation(self, result: dict) -> str:
                 vuln = {
                     "tool": "OWASP ZAP",
                     "type": "DAST",
-                    "title": alert.find("name").text if alert.find("name") is not None else "",
-                    "severity": self._normalize_zap_severity(alert.find("riskcode").text if alert.find("riskcode") is not None else "0"),
+                    "title": alert.find("name").text if alert.find("name") is not None else "Unknown",
+                    "severity": self._map_zap_risk(alert.find("riskcode").text if alert.find("riskcode") is not None else "0"),
                     "description": alert.find("desc").text if alert.find("desc") is not None else "",
                     "url": alert.find("uri").text if alert.find("uri") is not None else "",
-                    "cwe": f"CWE-{alert.find('cweid').text}" if alert.find("cweid") is not None else "",
+                    "cwe": f"CWE-{alert.find('cweid').text}" if alert.find("cweid") is not None else "CWE-Unknown",
                     "owasp": self._map_to_owasp(alert.find("name").text if alert.find("name") is not None else ""),
                     "recommendation": alert.find("solution").text if alert.find("solution") is not None else ""
                 }
                 self.vulnerabilities.append(vuln)
                 
-    def _normalize_zap_severity(self, riskcode: str) -> str:
-        """Convert ZAP risk code to severity"""
-        mapping = {"0": "INFO", "1": "LOW", "2": "MEDIUM", "3": "HIGH", "4": "CRITICAL"}
-        return mapping.get(str(riskcode), "MEDIUM")
+    def _map_zap_risk(self, risk_code: str) -> str:
+        """Map ZAP risk codes to severity levels"""
+        mapping = {
+            "3": "HIGH",
+            "2": "MEDIUM",
+            "1": "LOW",
+            "0": "INFO"
+        }
+        return mapping.get(str(risk_code), "MEDIUM")
         
     def _extract_cwe(self, check_id: str) -> str:
-        """Extract CWE from check ID"""
-        for vuln_type, cwe in self.CWE_MAPPING.items():
-            if vuln_type.lower() in check_id.lower():
-                return cwe
+        """Extract CWE from check ID or map common patterns"""
+        import re
+        match = re.search(r'CWE-(\d+)', check_id, re.IGNORECASE)
+        if match:
+            return f"CWE-{match.group(1)}"
         return "CWE-Unknown"
         
-    def _map_to_owasp(self, vulnerability_name: str) -> str:
+    def _map_to_owasp(self, vulnerability_type: str) -> str:
         """Map vulnerability to OWASP Top 10 2021"""
         owasp_mapping = {
+            "sql": "A03:2021 - Injection",
             "injection": "A03:2021 - Injection",
             "xss": "A03:2021 - Injection",
             "authentication": "A07:2021 - Identification and Authentication Failures",
+            "session": "A07:2021 - Identification and Authentication Failures",
             "access": "A01:2021 - Broken Access Control",
-            "exposure": "A02:2021 - Cryptographic Failures",
+            "authorization": "A01:2021 - Broken Access Control",
+            "crypto": "A02:2021 - Cryptographic Failures",
+            "sensitive": "A02:2021 - Cryptographic Failures",
             "xxe": "A05:2021 - Security Misconfiguration",
             "deserialization": "A08:2021 - Software and Data Integrity Failures",
+            "component": "A06:2021 - Vulnerable and Outdated Components",
             "logging": "A09:2021 - Security Logging and Monitoring Failures",
             "ssrf": "A10:2021 - Server-Side Request Forgery"
         }
         
-        vuln_lower = vulnerability_name.lower()
-        for key, owasp_cat in owasp_mapping.items():
-            if key in vuln_lower:
-                return owasp_cat
+        vulnerability_lower = vulnerability_type.lower()
+        for key, value in owasp_mapping.items():
+            if key in vulnerability_lower:
+                return value
+                
         return "A04:2021 - Insecure Design"
         
     def save_results(self):
